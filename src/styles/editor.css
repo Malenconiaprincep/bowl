@@ -5,22 +5,28 @@
   background: #fff;
   min-height: 200px;
   position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .editor-content {
-  padding: 12px;
+  padding: 16px;
   min-height: 200px;
   outline: none;
   line-height: 1.6;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   color: #333;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .editor-content:empty:before {
   content: attr(data-placeholder);
   color: #999;
   pointer-events: none;
+  position: absolute;
+  top: 16px;
+  left: 16px;
 }
 
 .editor-content:focus {
@@ -28,19 +34,31 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* 编辑器内容样式 */
+/* 编辑器内容样式 - 所见即所得 */
 .editor-content strong,
 .editor-content b {
   font-weight: bold;
+  color: inherit;
 }
 
 .editor-content em,
 .editor-content i {
   font-style: italic;
+  color: inherit;
 }
 
 .editor-content u {
   text-decoration: underline;
+  color: inherit;
+}
+
+/* 段落样式 */
+.editor-content p {
+  margin: 0 0 8px 0;
+}
+
+.editor-content p:last-child {
+  margin-bottom: 0;
 }
 
 /* 编辑器容器 */
@@ -48,4 +66,20 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+}
+
+/* 确保编辑器内容在编辑时保持可见 */
+.editor-content:focus {
+  background-color: #fff;
+}
+
+/* 选中文本的样式 */
+.editor-content ::selection {
+  background-color: #007bff;
+  color: white;
+}
+
+.editor-content ::-moz-selection {
+  background-color: #007bff;
+  color: white;
 } 

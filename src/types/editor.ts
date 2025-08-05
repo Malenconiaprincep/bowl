@@ -31,6 +31,7 @@ export interface ToolbarButton {
 
 export interface EditorProps {
   initialContent?: string;
+  value?: string;
   placeholder?: string;
   onChange?: (content: string) => void;
   onSelectionChange?: (selection: SelectionState) => void;
