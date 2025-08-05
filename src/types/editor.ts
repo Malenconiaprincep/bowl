@@ -2,8 +2,6 @@
 
 export interface EditorState {
   content: string;
-  selection: SelectionState;
-  history: HistoryState;
 }
 
 export interface SelectionState {

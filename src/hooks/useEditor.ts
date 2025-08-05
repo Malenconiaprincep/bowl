@@ -4,13 +4,17 @@ import type { EditorState, SelectionState, EditorCommand } from '../types/editor
 export const useEditor = (initialContent = '') => {
   const [editorState, setEditorState] = useState<EditorState>({
     content: initialContent,
-    selection: { start: 0, end: 0, collapsed: true },
-    history: { past: [], present: initialContent, future: [] }
   });
 
   const editorRef = useRef<HTMLDivElement>(null);
+  // 使用 ref 存储选区状态，不会触发重新渲染
+  const selectionRef = useRef<SelectionState>({
+    start: 0,
+    end: 0,
+    collapsed: true
+  });
 
-  // 获取当前选区
+  // 获取当前选区（更新 ref，不更新 state）
   const getSelection = useCallback((): SelectionState => {
     const selection = window.getSelection();
     if (!selection || !editorRef.current) {
@@ -25,12 +29,73 @@ export const useEditor = (initialContent = '') => {
     const start = preCaretRange.toString().length;
     const end = start + range.toString().length;
 
-    return {
+    const newSelection = {
       start,
       end,
       collapsed: start === end
     };
+
+    // 更新 ref，不更新 state
+    selectionRef.current = newSelection;
+    return newSelection;
   }, []);
+
+  // 处理选区变化（只更新 ref）
+  const handleSelectionChange = useCallback(() => {
+    getSelection(); // 只更新 ref，不更新 state
+  }, [getSelection]);
+
+  // 监听选区变化
+  useEffect(() => {
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, [handleSelectionChange]);
+
+  // 执行命令时，只在需要时获取选区
+  const executeCommand = useCallback((command: EditorCommand) => {
+    switch (command.type) {
+      case 'bold':
+        document.execCommand('bold', false);
+        break;
+      case 'italic':
+        document.execCommand('italic', false);
+        break;
+      case 'underline':
+        document.execCommand('underline', false);
+        break;
+      case 'insertText':
+        if (command.payload) {
+          document.execCommand('insertText', false, command.payload);
+        }
+        break;
+      case 'deleteContent':
+        document.execCommand('delete', false);
+        break;
+    }
+
+    // 只在执行命令后更新内容状态
+    if (editorRef.current) {
+      const newContent = editorRef.current.innerHTML;
+      setEditorState(prev => ({
+        ...prev,
+        content: newContent
+        // 不更新 selection，因为它在 ref 中
+      }));
+    }
+  }, []);
+
+  // 处理编辑器内容变化
+  const handleInput = useCallback(() => {
+    if (editorRef.current) {
+      const newContent = editorRef.current.innerHTML;
+      setEditorState(prev => ({
+        ...prev,
+        content: newContent,
+      }));
+    }
+  }, [getSelection]);
 
   // 设置选区
   const setSelection = useCallback((start: number, end: number) => {
@@ -77,79 +142,14 @@ export const useEditor = (initialContent = '') => {
     }
   }, []);
 
-  // 执行编辑器命令
-  const executeCommand = useCallback((command: EditorCommand) => {
-    switch (command.type) {
-      case 'bold':
-        document.execCommand('bold', false);
-        break;
-      case 'italic':
-        document.execCommand('italic', false);
-        break;
-      case 'underline':
-        document.execCommand('underline', false);
-        break;
-      case 'insertText':
-        if (command.payload) {
-          document.execCommand('insertText', false, command.payload);
-        }
-        break;
-      case 'deleteContent':
-        document.execCommand('delete', false);
-        break;
-    }
-
-    // 更新编辑器状态
-    if (editorRef.current) {
-      const newContent = editorRef.current.innerHTML;
-      setEditorState(prev => ({
-        ...prev,
-        content: newContent,
-        selection: getSelection()
-      }));
-    }
-  }, [getSelection]);
-
-  // 处理编辑器内容变化
-  const handleInput = useCallback(() => {
-    if (editorRef.current) {
-      const newContent = editorRef.current.innerHTML;
-      setEditorState(prev => ({
-        ...prev,
-        content: newContent,
-        selection: getSelection(),
-        history: {
-          ...prev.history,
-          past: [...prev.history.past, prev.history.present],
-          present: newContent,
-          future: []
-        }
-      }));
-    }
-  }, [getSelection]);
-
-  // 处理选区变化
-  const handleSelectionChange = useCallback(() => {
-    setEditorState(prev => ({
-      ...prev,
-      selection: getSelection()
-    }));
-  }, [getSelection]);
-
-  // 监听选区变化
-  useEffect(() => {
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange);
-    };
-  }, [handleSelectionChange]);
-
   return {
     editorRef,
     editorState,
     executeCommand,
     handleInput,
     getSelection,
-    setSelection
+    setSelection,
+    // 提供获取当前选区的方法
+    getCurrentSelection: () => selectionRef.current
   };
 }; 
