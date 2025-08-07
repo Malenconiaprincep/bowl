@@ -11,7 +11,6 @@ function App() {
         <h1>富文本编辑器</h1>
         <p>基于 React + contentEditable 实现</p>
       </header>
-
       <main>
         <EditorContainer value={content} placeholder="开始输入您的内容..." />
       </main>
