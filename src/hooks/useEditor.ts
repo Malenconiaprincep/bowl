@@ -13,5 +13,6 @@ export const useEditor = (initialContent = '') => {
       content,
     },
     handleInput,
+    setContentState,
   };
 }; 
