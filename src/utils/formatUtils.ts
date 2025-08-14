@@ -1,4 +1,5 @@
 // 格式化工具函数
+
 export interface FormatInfo {
   type: 'bold' | 'italic' | 'underline';
   tag: string;
@@ -11,131 +12,21 @@ export const FORMAT_TAGS: Record<string, FormatInfo> = {
 };
 
 /**
- * 检测选区内容的格式状态
+ * 检测格式状态 - 简化版本
  */
-export const detectFormatState = (
-  container: HTMLElement,
-  startOffset: number,
-  endOffset: number
-): Record<string, boolean> => {
-  const walker = document.createTreeWalker(
-    container,
-    NodeFilter.SHOW_TEXT,
-    null
-  );
-
-  const formatState = {
-    bold: true,
-    italic: true,
-    underline: true
-  };
-
-  let currentTextOffset = 0;
-  const selectedNodes: Array<{ node: Node; start: number; end: number }> = [];
-
-  // 收集选区内的所有文本节点
-  while (walker.nextNode()) {
-    const node = walker.currentNode;
-    const nodeLength = node.textContent?.length || 0;
-    const nodeStart = currentTextOffset;
-    const nodeEnd = currentTextOffset + nodeLength;
-
-    // 检查节点是否与选区重叠
-    if (nodeEnd > startOffset && nodeStart < endOffset) {
-      selectedNodes.push({ node, start: nodeStart, end: nodeEnd });
-    }
-
-    currentTextOffset += nodeLength;
-  }
-
-  // 如果没有选中任何文本节点，返回 false
-  if (selectedNodes.length === 0) {
+export const detectFormatState = (html: string): Record<string, boolean> => {
+  if (!html.trim()) {
     return { bold: false, italic: false, underline: false };
   }
 
-  // 检查每个节点的格式，只有当所有节点都有格式时才返回 true
-  for (const { node } of selectedNodes) {
-    const nodeFormats = {
-      bold: false,
-      italic: false,
-      underline: false
-    };
-
-    let parent = node.parentElement;
-    while (parent && parent !== container) {
-      const tagName = parent.tagName.toLowerCase();
-
-      if (tagName === 'strong' || tagName === 'b') {
-        nodeFormats.bold = true;
-      }
-      if (tagName === 'em' || tagName === 'i') {
-        nodeFormats.italic = true;
-      }
-      if (tagName === 'u') {
-        nodeFormats.underline = true;
-      }
-
-      parent = parent.parentElement;
-    }
-
-    // 如果当前节点缺少任何格式，更新全局格式状态
-    if (!nodeFormats.bold) formatState.bold = false;
-    if (!nodeFormats.italic) formatState.italic = false;
-    if (!nodeFormats.underline) formatState.underline = false;
-  }
-
-  return formatState;
-};
-
-/**
- * 移除特定格式
- */
-export const removeFormat = (
-  html: string,
-  formatType: 'bold' | 'italic' | 'underline'
-): string => {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
 
-  const tagsToRemove = getTagsForFormat(formatType);
-
-  // 递归处理所有匹配的标签
-  const removeTagsRecursive = (element: Element) => {
-    const elementsToRemove: Element[] = [];
-
-    tagsToRemove.forEach(tagName => {
-      const elements = element.querySelectorAll(tagName);
-      elements.forEach(el => elementsToRemove.push(el));
-    });
-
-    // 从内到外移除标签，保留内容和其他格式
-    elementsToRemove.forEach(element => {
-      const parent = element.parentNode;
-      if (parent) {
-        // 将子节点移动到父节点中，替换当前元素
-        while (element.firstChild) {
-          parent.insertBefore(element.firstChild, element);
-        }
-        parent.removeChild(element);
-      }
-    });
+  return {
+    bold: tempDiv.querySelector('strong, b') !== null,
+    italic: tempDiv.querySelector('em, i') !== null,
+    underline: tempDiv.querySelector('u') !== null
   };
-
-  removeTagsRecursive(tempDiv);
-  return tempDiv.innerHTML;
-};
-
-/**
- * 应用格式
- */
-export const applyFormat = (
-  html: string,
-  formatType: 'bold' | 'italic' | 'underline'
-): string => {
-  const format = FORMAT_TAGS[formatType];
-  if (!format) return html;
-
-  return `<${format.tag}>${html}</${format.tag}>`;
 };
 
 /**
@@ -155,212 +46,201 @@ const getTagsForFormat = (formatType: 'bold' | 'italic' | 'underline'): string[]
 };
 
 /**
- * 清理和优化HTML结构
- * 移除空标签、合并相邻的相同格式标签、优化嵌套结构
+ * 安全地展开元素，保持子元素顺序
  */
-export const cleanupHtml = (html: string): string => {
+const unwrapElement = (element: Element): void => {
+  const parent = element.parentNode;
+  if (!parent) return;
+
+  // 创建文档片段来保持顺序
+  const fragment = document.createDocumentFragment();
+
+  // 按顺序移动所有子节点到片段中
+  while (element.firstChild) {
+    fragment.appendChild(element.firstChild);
+  }
+
+  // 用片段替换原元素
+  parent.replaceChild(fragment, element);
+};
+
+/**
+ * 移除特定格式
+ */
+export const removeFormat = (
+  html: string,
+  formatType: 'bold' | 'italic' | 'underline'
+): string => {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
 
-  // 1. 移除空的格式标签
-  removeEmptyFormatTags(tempDiv);
+  const tagsToRemove = getTagsForFormat(formatType);
 
-  // 2. 合并相邻的相同格式标签
-  mergeAdjacentSameTags(tempDiv);
+  // 使用更安全的方式移除标签
+  tagsToRemove.forEach(tagName => {
+    const elements = Array.from(tempDiv.querySelectorAll(tagName));
 
-  // 3. 优化嵌套的相同标签
-  optimizeNestedSameTags(tempDiv);
-
-  // 4. 再次移除可能产生的空标签
-  removeEmptyFormatTags(tempDiv);
+    // 从最深层开始处理，避免影响父子关系
+    elements.reverse().forEach(element => {
+      unwrapElement(element);
+    });
+  });
 
   return tempDiv.innerHTML;
 };
 
 /**
- * 移除空的格式标签
+ * 应用格式
  */
-const removeEmptyFormatTags = (container: Element): void => {
-  const formatTags = ['strong', 'b', 'em', 'i', 'u'];
+export const applyFormat = (
+  html: string,
+  formatType: 'bold' | 'italic' | 'underline'
+): string => {
+  const format = FORMAT_TAGS[formatType];
+  if (!format) return html;
 
-  let hasChanges = true;
-  while (hasChanges) {
-    hasChanges = false;
-
-    formatTags.forEach(tagName => {
-      const elements = container.querySelectorAll(tagName);
-      elements.forEach(element => {
-        // 如果标签内容为空或只包含空白字符
-        if (!element.textContent?.trim()) {
-          element.remove();
-          hasChanges = true;
-        }
-      });
-    });
-  }
+  return `<${format.tag}>${html}</${format.tag}>`;
 };
 
 /**
- * 合并相邻的相同格式标签
+ * 清理HTML - 移除空标签和规范化格式
  */
-const mergeAdjacentSameTags = (container: Element): void => {
-  const formatTags = ['strong', 'b', 'em', 'i', 'u'];
+export const cleanupHtml = (html: string): string => {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
 
+  // 移除空的格式标签
+  const emptyTags = tempDiv.querySelectorAll('strong:empty, em:empty, u:empty, b:empty, i:empty');
+  emptyTags.forEach(tag => tag.remove());
+
+  // 合并相邻的相同格式标签
+  const formatTags = ['strong', 'em', 'u', 'b', 'i'];
   formatTags.forEach(tagName => {
-    let hasChanges = true;
-    while (hasChanges) {
-      hasChanges = false;
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const tags = tempDiv.querySelectorAll(tagName);
 
-      const elements = container.querySelectorAll(tagName);
-      elements.forEach(element => {
-        const nextSibling = element.nextElementSibling;
-
-        // 如果下一个元素是相同的标签
+      tags.forEach(tag => {
+        const nextSibling = tag.nextElementSibling;
         if (nextSibling && nextSibling.tagName.toLowerCase() === tagName) {
-          // 将下一个元素的内容移动到当前元素
+          // 合并相邻的相同标签
           while (nextSibling.firstChild) {
-            element.appendChild(nextSibling.firstChild);
+            tag.appendChild(nextSibling.firstChild);
           }
           nextSibling.remove();
-          hasChanges = true;
+          changed = true;
         }
       });
     }
   });
+
+  return tempDiv.innerHTML;
 };
 
 /**
- * 优化嵌套的相同标签
- */
-const optimizeNestedSameTags = (container: Element): void => {
-  const formatTags = ['strong', 'b', 'em', 'i', 'u'];
-
-  formatTags.forEach(tagName => {
-    let hasChanges = true;
-    while (hasChanges) {
-      hasChanges = false;
-
-      const elements = container.querySelectorAll(tagName);
-      elements.forEach(element => {
-        // 检查是否有嵌套的相同标签（不一定是直接嵌套）
-        const nestedSame = element.querySelector(tagName);
-        if (nestedSame && nestedSame !== element) {
-          // 将嵌套标签的内容提升到其父级
-          const parent = nestedSame.parentNode;
-          while (nestedSame.firstChild) {
-            parent?.insertBefore(nestedSame.firstChild, nestedSame);
-          }
-          nestedSame.remove();
-          hasChanges = true;
-        }
-      });
-    }
-  });
-};
-
-/**
- * 智能格式化：根据当前状态决定添加还是移除格式，并清理HTML
+ * 基础格式切换
  */
 export const toggleFormat = (
   selectedHtml: string,
-  formatType: 'bold' | 'italic' | 'underline',
-  currentState: boolean
-): string => {
-  let result: string;
-
-  if (currentState) {
-    // 如果已有格式，移除它
-    result = removeFormat(selectedHtml, formatType);
-  } else {
-    // 如果没有格式，添加它
-    result = applyFormat(selectedHtml, formatType);
-  }
-
-  // 清理和优化HTML结构
-  return cleanupHtml(result);
-};
-
-/**
- * 智能格式切换：更智能地处理格式的添加和移除
- */
-export const smartToggleFormat = (
-  selectedHtml: string,
   formatType: 'bold' | 'italic' | 'underline'
 ): string => {
-  // 检查选中的HTML是否已经包含目标格式
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = selectedHtml;
-
-  const formatTags = getTagsForFormat(formatType);
-  const hasFormat = formatTags.some(tag => tempDiv.querySelector(tag));
+  const formatState = detectFormatState(selectedHtml);
+  const hasFormat = formatState[formatType];
 
   if (hasFormat) {
-    // 如果已有格式，移除它
-    return cleanupHtml(removeFormat(selectedHtml, formatType));
+    return removeFormat(selectedHtml, formatType);
   } else {
-    // 如果没有格式，添加它
-    return cleanupHtml(applyFormat(selectedHtml, formatType));
+    return applyFormat(selectedHtml, formatType);
   }
 };
 
 /**
- * 处理复杂的嵌套格式，并清理HTML
+ * 智能格式切换 - 解决元素顺序问题
  */
-export const handleNestedFormat = (
-  container: HTMLElement,
-  startOffset: number,
-  endOffset: number,
+export const smartToggleFormat = (
+  html: string,
   formatType: 'bold' | 'italic' | 'underline'
 ): string => {
-  // 获取选区的HTML内容
-  const range = document.createRange();
-  const startPos = getNodeAndOffsetFromTextOffset(container, startOffset);
-  const endPos = getNodeAndOffsetFromTextOffset(container, endOffset);
+  // 检测当前是否有该格式
+  const hasFormat = detectFormatState(html)[formatType];
 
-  if (!startPos || !endPos) return '';
-
-  range.setStart(startPos.node, startPos.offset);
-  range.setEnd(endPos.node, endPos.offset);
-
-  const selectedContent = range.cloneContents();
-  const tempDiv = document.createElement('div');
-  tempDiv.appendChild(selectedContent);
-
-  const selectedHtml = tempDiv.innerHTML;
-
-  // 使用智能格式切换，直接检查HTML内容而不是依赖detectFormatState
-  const result = smartToggleFormat(selectedHtml, formatType);
-
-  return result;
+  if (hasFormat) {
+    // 检查是否整个内容都被该格式包围
+    if (isFullyFormatted(html, formatType)) {
+      // 如果整个内容都被格式包围，则移除格式
+      return smartRemoveFormat(html, formatType);
+    } else {
+      // 如果只有部分内容有格式，则添加外层格式
+      return smartApplyFormat(html, formatType);
+    }
+  } else {
+    // 如果没有格式，添加它
+    return smartApplyFormat(html, formatType);
+  }
 };
 
 /**
- * 根据文本偏移量获取节点和偏移量
+ * 智能应用格式 - 保持元素顺序
  */
-const getNodeAndOffsetFromTextOffset = (
-  container: HTMLElement,
-  textOffset: number
-): { node: Node; offset: number } | null => {
-  const walker = document.createTreeWalker(
-    container,
-    NodeFilter.SHOW_TEXT,
-    null
-  );
+export const smartApplyFormat = (
+  html: string,
+  formatType: 'bold' | 'italic' | 'underline'
+): string => {
+  const format = FORMAT_TAGS[formatType];
+  if (!format) return html;
 
-  let currentOffset = 0;
+  // 简单包装，保持内部结构不变
+  return `<${format.tag}>${html}</${format.tag}>`;
+};
 
-  while (walker.nextNode()) {
-    const node = walker.currentNode;
-    const nodeLength = node.textContent?.length || 0;
+/**
+ * 智能移除格式 - 保持元素顺序和其他格式
+ */
+export const smartRemoveFormat = (
+  html: string,
+  formatType: 'bold' | 'italic' | 'underline'
+): string => {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
 
-    if (currentOffset + nodeLength >= textOffset) {
-      return {
-        node,
-        offset: textOffset - currentOffset
-      };
+  const tagsToRemove = getTagsForFormat(formatType);
+
+  // 使用更安全的方式移除标签
+  tagsToRemove.forEach(tagName => {
+    const elements = Array.from(tempDiv.querySelectorAll(tagName));
+
+    // 从最深层开始处理，避免影响父子关系
+    elements.reverse().forEach(element => {
+      unwrapElement(element);
+    });
+  });
+
+  return cleanupHtml(tempDiv.innerHTML);
+};
+
+/**
+ * 检查是否整个内容都被某种格式包围
+ */
+export const isFullyFormatted = (
+  html: string,
+  formatType: 'bold' | 'italic' | 'underline'
+): boolean => {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+
+  const tagsToCheck = getTagsForFormat(formatType);
+
+  // 检查根级是否只有一个对应格式的元素，且包含所有内容
+  const rootChildren = Array.from(tempDiv.childNodes);
+
+  if (rootChildren.length === 1) {
+    const onlyChild = rootChildren[0];
+    if (onlyChild.nodeType === Node.ELEMENT_NODE) {
+      const element = onlyChild as Element;
+      return tagsToCheck.includes(element.tagName.toLowerCase());
     }
-    currentOffset += nodeLength;
   }
 
-  return null;
+  return false;
 };

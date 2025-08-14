@@ -139,27 +139,37 @@ export const useEditor = (initialContent = '') => {
 
     if (!selectedText) return;
 
-    // 直接获取选中的HTML内容，而不是计算偏移量
+    // 获取选中的HTML内容
     const selectedContent = range.cloneContents();
-    const tempDiv1 = document.createElement('div');
-    tempDiv1.appendChild(selectedContent);
-    const selectedHtml = tempDiv1.innerHTML;
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(selectedContent);
+    const selectedHtml = tempDiv.innerHTML;
 
-    // 使用 formatUtils 处理格式化
-    const formatType = command.type as 'bold' | 'italic' | 'underline';
-    const formattedHtml = smartToggleFormat(selectedHtml, formatType);
+    // 使用新的智能格式化
+    const newHtml = smartToggleFormat(selectedHtml, command.type);
 
     // 替换选中的内容
     range.deleteContents();
-    const tempDiv2 = document.createElement('div');
-    tempDiv2.innerHTML = formattedHtml;
 
-    while (tempDiv2.firstChild) {
-      range.insertNode(tempDiv2.firstChild);
+    // 创建新的内容片段
+    const newTempDiv = document.createElement('div');
+    newTempDiv.innerHTML = newHtml;
+
+    // 插入新内容，保持顺序
+    const fragment = document.createDocumentFragment();
+    while (newTempDiv.firstChild) {
+      fragment.appendChild(newTempDiv.firstChild);
     }
+
+    range.insertNode(fragment);
 
     // 更新状态
     setContentState(container.innerHTML);
+
+    // 将光标移到插入内容的后面
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
   }, []);
 
 

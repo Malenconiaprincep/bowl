@@ -49,7 +49,8 @@ export const RichTextEditor: React.FC<EditorProps> = ({
           外部更新内容（测试数据驱动）
         </div>
         <span style={{ marginLeft: '10px', fontSize: '12px', color: '#666' }}>
-          内容长度: {editorState.content.length}
+          <p>内容长度: {editorState.content.length}</p>
+          <p>{editorState.content}</p>
         </span>
       </div>
       <div className="rich-text-editor">
