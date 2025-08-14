@@ -14,6 +14,7 @@ import {
   applyFormat,
   toggleFormat,
   cleanupHtml,
+  smartToggleFormat,
 } from '../utils/formatUtils';
 
 // Mock DOM environment
@@ -154,6 +155,293 @@ describe('格式化工具函数测试', () => {
       // toggleFormat 会先应用格式: <strong><strong>部分</strong>加粗</strong>
       // 然后 cleanupHtml 会优化嵌套的相同标签: <strong>部分加粗</strong>
       expect(result).toBe('<strong>部分加粗</strong>');
+    });
+  });
+
+  describe('智能格式切换测试', () => {
+    it('应该在没有格式时添加格式', () => {
+      const html = '普通文本';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('<strong>普通文本</strong>');
+    });
+
+    it('应该在有格式时移除格式', () => {
+      const html = '<strong>加粗文本</strong>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('加粗文本');
+    });
+
+    it('应该正确处理部分格式的情况', () => {
+      const html = '<strong>部分</strong>加粗';
+      const result = smartToggleFormat(html, 'bold');
+      // 由于有部分格式，应该移除所有加粗格式
+      expect(result).toBe('部分加粗');
+    });
+
+    it('应该处理嵌套格式的移除', () => {
+      const html = '<strong><em>嵌套格式</em></strong>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('<em>嵌套格式</em>');
+    });
+
+    it('应该处理多重格式的移除', () => {
+      const html = '<strong><em><u>三重格式</u></em></strong>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('<em><u>三重格式</u></em>');
+    });
+
+    it('应该处理混合格式的移除', () => {
+      const html = '<strong>粗体</strong>普通<em>斜体</em>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('粗体普通<em>斜体</em>');
+    });
+
+    it('应该处理空标签的移除', () => {
+      const html = '<strong></strong>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('');
+    });
+
+    it('应该处理只包含空格的标签移除', () => {
+      const html = '<strong>   </strong>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('   ');
+    });
+
+    it('应该处理自闭合标签', () => {
+      const html = '<strong>文本<br/>换行</strong>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('文本<br>换行');
+    });
+
+    it('应该处理特殊字符', () => {
+      const html = '<strong>&lt;&gt;&amp;</strong>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('&lt;&gt;&amp;');
+    });
+
+    it('应该处理复杂的嵌套结构移除', () => {
+      const html = '<strong><em>斜体<u>下划线</u></em>文本</strong>';
+      const result = smartToggleFormat(html, 'bold');
+      expect(result).toBe('<em>斜体<u>下划线</u></em>文本');
+    });
+
+    it('应该处理多次切换操作', () => {
+      let html = '测试文本';
+
+      // 第一次：添加加粗
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('<strong>测试文本</strong>');
+
+      // 第二次：移除加粗
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('测试文本');
+
+      // 第三次：再次添加加粗
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('<strong>测试文本</strong>');
+    });
+
+    it('应该处理不同格式类型的切换', () => {
+      let html = '测试文本';
+
+      // 添加加粗
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('<strong>测试文本</strong>');
+
+      // 添加斜体
+      html = smartToggleFormat(html, 'italic');
+      expect(html).toBe('<em><strong>测试文本</strong></em>');
+
+      // 移除加粗
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('<em>测试文本</em>');
+
+      // 移除斜体
+      html = smartToggleFormat(html, 'italic');
+      expect(html).toBe('测试文本');
+    });
+
+    it('应该检查取消加粗时不会出现额外字符', () => {
+      // 测试简单的加粗取消
+      let html = '<strong>Hello World</strong>';
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('Hello World');
+      expect(html.length).toBe(11); // 确保没有额外字符
+
+      // 测试嵌套格式的加粗取消
+      html = '<strong><em>Hello</em> World</strong>';
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('<em>Hello</em> World');
+      expect(html.length).toBe(20); // 确保没有额外字符
+
+      // 测试多重格式的加粗取消
+      html = '<strong><em><u>Hello</u></em> World</strong>';
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('<em><u>Hello</u></em> World');
+      expect(html.length).toBe(27); // 确保没有额外字符
+    });
+
+    it('应该检查HTML结构的完整性', () => {
+      // 测试复杂的HTML结构
+      const originalHtml = '<strong><em>斜体</em>和<u>下划线</u>文本</strong>';
+      const result = smartToggleFormat(originalHtml, 'bold');
+
+      // 验证结果不包含多余的字符
+      expect(result).toBe('<em>斜体</em>和<u>下划线</u>文本');
+
+      // 验证HTML结构正确
+      expect(result).toContain('<em>斜体</em>');
+      expect(result).toContain('<u>下划线</u>');
+      expect(result).toContain('和');
+      expect(result).toContain('文本');
+
+      // 验证没有多余的标签
+      expect(result).not.toContain('<strong>');
+      expect(result).not.toContain('</strong>');
+    });
+
+    it('应该处理边界情况下的字符完整性', () => {
+      // 测试空内容
+      let html = '<strong></strong>';
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('');
+      expect(html.length).toBe(0);
+
+      // 测试只有空格
+      html = '<strong>   </strong>';
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('   ');
+      expect(html.length).toBe(3);
+
+      // 测试特殊字符
+      html = '<strong>&lt;&gt;&amp;</strong>';
+      html = smartToggleFormat(html, 'bold');
+      expect(html).toBe('&lt;&gt;&amp;');
+      expect(html.length).toBe(13);
+    });
+
+    it('应该直接测试 removeFormat 函数', () => {
+      // 直接测试 removeFormat，不经过 smartToggleFormat
+      const html = '<strong><em>Hello</em> World</strong>';
+      const result = removeFormat(html, 'bold');
+      console.log('removeFormat 直接结果:', JSON.stringify(result));
+      console.log('期望结果:', JSON.stringify('<em>Hello</em> World'));
+      expect(result).toBe('<em>Hello</em> World');
+    });
+
+    it('应该分析字符差异', () => {
+      const html = '<strong><em>Hello</em> World</strong>';
+      const result = removeFormat(html, 'bold');
+      const expected = '<em>Hello</em> World';
+
+      console.log('实际结果:', result);
+      console.log('期望结果:', expected);
+      console.log('实际长度:', result.length);
+      console.log('期望长度:', expected.length);
+
+      // 逐字符比较
+      for (let i = 0; i < Math.max(result.length, expected.length); i++) {
+        const actualChar = result[i] || 'undefined';
+        const expectedChar = expected[i] || 'undefined';
+        if (actualChar !== expectedChar) {
+          console.log(`位置 ${i}: 实际='${actualChar}' (${actualChar.charCodeAt(0)}) 期望='${expectedChar}' (${expectedChar.charCodeAt(0)})`);
+        }
+      }
+
+      expect(result).toBe(expected);
+    });
+
+    it('应该重现用户提到的字符重复问题', () => {
+      // 模拟用户操作：12345678，选中4567，加粗，再取消加粗
+
+      // 第一步：选中4567并加粗
+      const selectedHtml = '4567';
+      const boldHtml = applyFormat(selectedHtml, 'bold');
+      console.log('加粗后:', boldHtml);
+
+      // 第二步：取消加粗
+      const unboldHtml = removeFormat(boldHtml, 'bold');
+      console.log('取消加粗后:', unboldHtml);
+
+      // 第三步：清理HTML
+      const cleanedHtml = cleanupHtml(unboldHtml);
+      console.log('清理后:', cleanedHtml);
+
+      // 验证结果
+      expect(cleanedHtml).toBe('4567');
+      expect(cleanedHtml.length).toBe(4);
+
+      // 检查是否有重复字符
+      expect(cleanedHtml).not.toContain('45674567');
+      expect(cleanedHtml).not.toContain('45678');
+    });
+
+    it('应该测试完整的格式化流程', () => {
+      // 模拟完整的编辑器操作流程
+      let html = '12345678';
+
+      // 1. 应用加粗格式
+      html = applyFormat(html, 'bold');
+      expect(html).toBe('<strong>12345678</strong>');
+
+      // 2. 移除加粗格式
+      html = removeFormat(html, 'bold');
+      expect(html).toBe('12345678');
+
+      // 3. 清理HTML
+      html = cleanupHtml(html);
+      expect(html).toBe('12345678');
+
+      // 4. 再次应用加粗
+      html = applyFormat(html, 'bold');
+      expect(html).toBe('<strong>12345678</strong>');
+
+      // 5. 再次移除加粗
+      html = removeFormat(html, 'bold');
+      expect(html).toBe('12345678');
+
+      // 6. 最终清理
+      html = cleanupHtml(html);
+      expect(html).toBe('12345678');
+
+      // 验证最终结果
+      expect(html).toBe('12345678');
+      expect(html.length).toBe(8);
+    });
+
+    it('应该模拟实际的编辑器选区操作', () => {
+      // 模拟编辑器中的实际操作：12345678，选中4567
+
+      // 模拟选中4567部分
+      const selectedText = '4567';
+      const beforeSelection = '123';
+      const afterSelection = '8';
+
+      // 第一次：应用加粗
+      const formattedHtml = applyFormat(selectedText, 'bold');
+      expect(formattedHtml).toBe('<strong>4567</strong>');
+
+      // 模拟在编辑器中替换内容
+      const firstResult = beforeSelection + formattedHtml + afterSelection;
+      expect(firstResult).toBe('123<strong>4567</strong>8');
+
+      // 第二次：取消加粗（模拟用户再次点击加粗按钮）
+      const unformattedHtml = removeFormat(formattedHtml, 'bold');
+      expect(unformattedHtml).toBe('4567');
+
+      // 模拟在编辑器中再次替换内容
+      const secondResult = beforeSelection + unformattedHtml + afterSelection;
+      expect(secondResult).toBe('12345678');
+
+      // 验证最终结果
+      expect(secondResult).toBe('12345678');
+      expect(secondResult.length).toBe(8);
+      expect(secondResult).not.toContain('45674567');
+      // 注意：'45678' 是 '12345678' 的子字符串，这是正常的
+      // 我们真正要检查的是是否有重复的字符
+      expect(secondResult.indexOf('4567')).toBe(3); // 4567 应该只出现一次，位置在索引3
+      expect(secondResult.lastIndexOf('4567')).toBe(3); // 最后一次出现也应该在索引3
     });
   });
 

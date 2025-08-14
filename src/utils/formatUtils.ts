@@ -281,6 +281,29 @@ export const toggleFormat = (
 };
 
 /**
+ * 智能格式切换：更智能地处理格式的添加和移除
+ */
+export const smartToggleFormat = (
+  selectedHtml: string,
+  formatType: 'bold' | 'italic' | 'underline'
+): string => {
+  // 检查选中的HTML是否已经包含目标格式
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = selectedHtml;
+
+  const formatTags = getTagsForFormat(formatType);
+  const hasFormat = formatTags.some(tag => tempDiv.querySelector(tag));
+
+  if (hasFormat) {
+    // 如果已有格式，移除它
+    return cleanupHtml(removeFormat(selectedHtml, formatType));
+  } else {
+    // 如果没有格式，添加它
+    return cleanupHtml(applyFormat(selectedHtml, formatType));
+  }
+};
+
+/**
  * 处理复杂的嵌套格式，并清理HTML
  */
 export const handleNestedFormat = (
@@ -304,12 +327,11 @@ export const handleNestedFormat = (
   tempDiv.appendChild(selectedContent);
 
   const selectedHtml = tempDiv.innerHTML;
-  const formatState = detectFormatState(container, startOffset, endOffset);
 
-  const result = toggleFormat(selectedHtml, formatType, formatState[formatType]);
+  // 使用智能格式切换，直接检查HTML内容而不是依赖detectFormatState
+  const result = smartToggleFormat(selectedHtml, formatType);
 
-  // 应用额外的清理，确保整体结构的优化
-  return cleanupHtml(result);
+  return result;
 };
 
 /**

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { EditorCommand } from '../types/editor';
-import { handleNestedFormat, cleanupHtml } from '../utils/formatUtils';
+import { smartToggleFormat } from '../utils/formatUtils';
 
 interface CursorPosition {
   offset: number;
@@ -139,99 +139,30 @@ export const useEditor = (initialContent = '') => {
 
     if (!selectedText) return;
 
-    // 计算选区的文本偏移量
-    const startOffset = getTextOffsetFromRange(container, range, true);
-    const endOffset = getTextOffsetFromRange(container, range, false);
+    // 直接获取选中的HTML内容，而不是计算偏移量
+    const selectedContent = range.cloneContents();
+    const tempDiv1 = document.createElement('div');
+    tempDiv1.appendChild(selectedContent);
+    const selectedHtml = tempDiv1.innerHTML;
 
     // 使用 formatUtils 处理格式化
     const formatType = command.type as 'bold' | 'italic' | 'underline';
-    const formattedHtml = handleNestedFormat(
-      container,
-      startOffset,
-      endOffset,
-      formatType
-    );
+    const formattedHtml = smartToggleFormat(selectedHtml, formatType);
 
     // 替换选中的内容
     range.deleteContents();
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = formattedHtml;
+    const tempDiv2 = document.createElement('div');
+    tempDiv2.innerHTML = formattedHtml;
 
-    while (tempDiv.firstChild) {
-      range.insertNode(tempDiv.firstChild);
+    while (tempDiv2.firstChild) {
+      range.insertNode(tempDiv2.firstChild);
     }
-
-    // 清理整个编辑器的HTML结构
-    const cleanedHtml = cleanupHtml(container.innerHTML);
-
-    // 保存当前光标位置信息
-    const cursorInfo = {
-      startContainer: range.startContainer,
-      startOffset: range.startOffset,
-      endContainer: range.endContainer,
-      endOffset: range.endOffset
-    };
-
-    container.innerHTML = cleanedHtml;
-
-    // 恢复光标位置
-    const newRange = document.createRange();
-    try {
-      // 尝试恢复光标位置（如果节点仍然存在）
-      newRange.setStart(cursorInfo.startContainer, cursorInfo.startOffset);
-      newRange.setEnd(cursorInfo.endContainer, cursorInfo.endOffset);
-    } catch {
-      // 如果恢复失败，将光标放在内容末尾
-      const walker = document.createTreeWalker(
-        container,
-        NodeFilter.SHOW_TEXT,
-        null
-      );
-      let lastTextNode = null;
-      while (walker.nextNode()) {
-        lastTextNode = walker.currentNode;
-      }
-      if (lastTextNode) {
-        newRange.setStart(lastTextNode, lastTextNode.textContent?.length || 0);
-        newRange.setEnd(lastTextNode, lastTextNode.textContent?.length || 0);
-      }
-    }
-
-    selection.removeAllRanges();
-    selection.addRange(newRange);
 
     // 更新状态
-    setContentState(cleanedHtml);
+    setContentState(container.innerHTML);
   }, []);
 
-  // 辅助函数：从 Range 获取文本偏移量
-  const getTextOffsetFromRange = useCallback((
-    container: HTMLElement,
-    range: Range,
-    isStart: boolean
-  ): number => {
-    const walker = document.createTreeWalker(
-      container,
-      NodeFilter.SHOW_TEXT,
-      null
-    );
 
-    let textOffset = 0;
-    const targetNode = isStart ? range.startContainer : range.endContainer;
-    const targetOffset = isStart ? range.startOffset : range.endOffset;
-
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-
-      if (node === targetNode) {
-        return textOffset + targetOffset;
-      }
-
-      textOffset += node.textContent?.length || 0;
-    }
-
-    return textOffset;
-  }, []);
 
   // 设置编辑器引用
   const setEditorRef = useCallback((element: HTMLDivElement | null) => {
