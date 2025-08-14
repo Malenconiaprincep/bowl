@@ -1,63 +1,75 @@
 import React, { useEffect, useRef } from "react";
 import { useEditor } from "../../hooks/useEditor";
 import type { EditorProps } from "../../types/editor";
-import { updateEditorContent } from "../../utils/editorUtils";
 import "../../styles/editor.css";
 
 export const RichTextEditor: React.FC<EditorProps> = ({
   initialContent = "",
   placeholder = "开始输入...",
+  onReady,
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
-  const { editorState, setContentState, handleInput } = useEditor(initialContent);
+  const {
+    editorState,
+    handleInput,
+    updateContent,
+    executeCommand,
+    setEditorRef
+  } = useEditor(initialContent);
+
+  // 设置编辑器引用
+  useEffect(() => {
+    setEditorRef(editorRef.current);
+  }, [setEditorRef]);
+
+  // 传递 executeCommand 给父组件
+  useEffect(() => {
+    if (onReady) {
+      onReady(executeCommand);
+    }
+  }, [onReady, executeCommand]);
 
   // 初始化内容
   useEffect(() => {
-    if (editorRef.current && initialContent) {
-      editorRef.current.innerHTML = initialContent;
+    if (initialContent) {
+      updateContent(initialContent);
     }
-  }, [initialContent]);
+  }, [initialContent, updateContent]);
 
-  // 状态同步：当 React 状态变化时，同步到 DOM
-  useEffect(() => {
-    if (editorRef.current) {
-      updateEditorContent(editorRef.current, editorState.content, editorRef.current.innerHTML);
-    }
-  }, [editorState.content]);
-
-  const handleInputDirect = (event: React.ChangeEvent<HTMLDivElement>) => {
-    // 直接更新状态，不通过 dangerouslySetInnerHTML
-    handleInput(event);
-  };
-
-  // 测试外部同步的按钮
+  // 测试外部更新的按钮
   const handleExternalUpdate = () => {
-    // 模拟外部更新内容（比如工具栏按钮）
-    setContentState(prev => prev + '<strong>外部添加的内容</strong>');
+    updateContent(editorState.content + '<strong>外部添加的内容</strong>');
   };
-
-  console.log(editorState.content);
 
   return (
-    <div className="rich-text-editor">
-      {/* 添加测试按钮 */}
-      <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0' }}>
-        <button onClick={handleExternalUpdate} style={{ padding: '5px 10px' }}>
-          外部更新内容（测试光标保持）
-        </button>
+    <div>
+      {/* 测试按钮 */}
+      <div style={{ marginBottom: '10px', padding: '10px' }}>
+        <div onClick={handleExternalUpdate} style={{ padding: '5px 10px', border: '1px solid #ddd' }}>
+          外部更新内容（测试数据驱动）
+        </div>
         <span style={{ marginLeft: '10px', fontSize: '12px', color: '#666' }}>
-          点击按钮后，光标应该保持在原位置
+          内容长度: {editorState.content.length}
         </span>
       </div>
+      <div className="rich-text-editor">
+        <div
+          ref={editorRef}
+          className="editor-content"
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleInput}
+          data-placeholder={placeholder}
+        />
+      </div>
 
-      <div
-        ref={editorRef}
-        className="editor-content"
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInputDirect}
-        data-placeholder={placeholder}
-      />
+
+      <div contentEditable={true} dangerouslySetInnerHTML={{ __html: `这是<strong><em>加粗斜体</em></strong>文本` }}>
+
+      </div>
+
+
     </div>
+
   );
 };
