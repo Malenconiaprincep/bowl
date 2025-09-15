@@ -75,11 +75,11 @@
 
 /* 选中文本的样式 */
 .editor-content ::selection {
-  background-color: #007bff;
-  color: white;
+  /* background-color: #007bff;
+  color: white; */
 }
 
 .editor-content ::-moz-selection {
-  background-color: #007bff;
-  color: white;
+  /* background-color: #007bff;
+  color: white; */
 } 

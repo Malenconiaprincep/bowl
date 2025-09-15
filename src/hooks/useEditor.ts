@@ -131,6 +131,11 @@ export const useEditor = (initialContent = '') => {
     const container = editorRef.current;
     if (!container) return;
 
+    // 只处理格式化命令
+    if (!['bold', 'italic', 'underline'].includes(command.type)) {
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
 
@@ -146,7 +151,7 @@ export const useEditor = (initialContent = '') => {
     const selectedHtml = tempDiv.innerHTML;
 
     // 使用新的智能格式化
-    const newHtml = smartToggleFormat(selectedHtml, command.type);
+    const newHtml = smartToggleFormat(selectedHtml, command.type as 'bold' | 'italic' | 'underline');
 
     // 替换选中的内容
     range.deleteContents();
@@ -165,11 +170,6 @@ export const useEditor = (initialContent = '') => {
 
     // 更新状态
     setContentState(container.innerHTML);
-
-    // 将光标移到插入内容的后面
-    range.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(range);
   }, []);
 
 

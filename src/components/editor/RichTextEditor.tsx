@@ -17,6 +17,8 @@ export const RichTextEditor: React.FC<EditorProps> = ({
     setEditorRef
   } = useEditor(initialContent);
 
+  console.log('editorState', editorState);
+
   // 设置编辑器引用
   useEffect(() => {
     setEditorRef(editorRef.current);
@@ -36,18 +38,12 @@ export const RichTextEditor: React.FC<EditorProps> = ({
     }
   }, [initialContent, updateContent]);
 
-  // 测试外部更新的按钮
-  const handleExternalUpdate = () => {
-    updateContent(editorState.content + '<strong>外部添加的内容</strong>');
-  };
+
 
   return (
     <div>
       {/* 测试按钮 */}
       <div style={{ marginBottom: '10px', padding: '10px' }}>
-        <div onClick={handleExternalUpdate} style={{ padding: '5px 10px', border: '1px solid #ddd' }}>
-          外部更新内容（测试数据驱动）
-        </div>
         <span style={{ marginLeft: '10px', fontSize: '12px', color: '#666' }}>
           <p>内容长度: {editorState.content.length}</p>
           <p>{editorState.content}</p>
@@ -63,13 +59,6 @@ export const RichTextEditor: React.FC<EditorProps> = ({
           data-placeholder={placeholder}
         />
       </div>
-
-
-      <div contentEditable={true} dangerouslySetInnerHTML={{ __html: `这是<strong><em>加粗斜体</em></strong>文本` }}>
-
-      </div>
-
-
     </div>
 
   );
