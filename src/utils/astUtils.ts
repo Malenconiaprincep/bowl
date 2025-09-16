@@ -42,6 +42,53 @@ export function getTextNodes(ast: ASTNode[]): TextNode[] {
   return textNodes;
 }
 
+// ==================== 公共工具函数 ====================
+
+// AST 深拷贝
+function cloneAST(ast: ASTNode[]): ASTNode[] {
+  return JSON.parse(JSON.stringify(ast));
+}
+
+// 获取目标文本节点
+function getTargetTextNode(ast: ASTNode[], nodeIndex: number): TextNode | null {
+  const textNodes = getTextNodes(ast);
+  return textNodes[nodeIndex] || null;
+}
+
+// 文本切片操作
+function sliceText(text: string, startOffset: number, endOffset?: number): {
+  before: string;
+  selected: string;
+  after: string;
+} {
+  const before = text.slice(0, startOffset);
+  const selected = endOffset !== undefined ? text.slice(startOffset, endOffset) : '';
+  const after = endOffset !== undefined ? text.slice(endOffset) : text.slice(startOffset);
+
+  return { before, selected, after };
+}
+
+// 创建光标位置
+function createCursorPosition(nodeIndex: number, textOffset: number, isAtEnd: boolean = false): CursorPosition {
+  return { nodeIndex, textOffset, isAtEnd };
+}
+
+// 验证选区是否有效
+function isValidSelection(selection: Selection, textNodes: TextNode[]): boolean {
+  if (!selection.hasSelection) return true;
+
+  const { start, end } = selection;
+  const startNode = textNodes[start.nodeIndex];
+  const endNode = textNodes[end.nodeIndex];
+
+  if (!startNode || !endNode) return false;
+
+  const startValid = start.textOffset >= 0 && start.textOffset <= startNode.value.length;
+  const endValid = end.textOffset >= 0 && end.textOffset <= endNode.value.length;
+
+  return startValid && endValid;
+}
+
 // 建立 DOM 节点到文本节点的映射
 export function buildNodeMapping(container: HTMLElement, ast: ASTNode[]): NodeMapping[] {
   const mappings: NodeMapping[] = [];
@@ -96,13 +143,11 @@ export function findTextNodeIndex(container: HTMLElement, ast: ASTNode[], domNod
 
 // 在指定位置插入文本
 export function insertTextAtPosition(ast: ASTNode[], position: CursorPosition, text: string): ASTNode[] {
-  const newAst = JSON.parse(JSON.stringify(ast));
-  const textNodes = getTextNodes(newAst);
-  const targetNode = textNodes[position.nodeIndex];
+  const newAst = cloneAST(ast);
+  const targetNode = getTargetTextNode(newAst, position.nodeIndex);
 
   if (targetNode) {
-    const before = targetNode.value.slice(0, position.textOffset);
-    const after = targetNode.value.slice(position.textOffset);
+    const { before, after } = sliceText(targetNode.value, position.textOffset);
     targetNode.value = before + text + after;
   }
 
@@ -111,13 +156,11 @@ export function insertTextAtPosition(ast: ASTNode[], position: CursorPosition, t
 
 // 在指定位置删除文本
 export function deleteTextAtPosition(ast: ASTNode[], position: CursorPosition, length: number = 1): ASTNode[] {
-  const newAst = JSON.parse(JSON.stringify(ast));
-  const textNodes = getTextNodes(newAst);
-  const targetNode = textNodes[position.nodeIndex];
+  const newAst = cloneAST(ast);
+  const targetNode = getTargetTextNode(newAst, position.nodeIndex);
 
   if (targetNode) {
-    const before = targetNode.value.slice(0, position.textOffset - length);
-    const after = targetNode.value.slice(position.textOffset);
+    const { before, after } = sliceText(targetNode.value, position.textOffset - length, position.textOffset);
     targetNode.value = before + after;
   }
 
@@ -126,7 +169,7 @@ export function deleteTextAtPosition(ast: ASTNode[], position: CursorPosition, l
 
 // 在 AST 中替换文本节点
 export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes: TextNode[]): ASTNode[] {
-  const newAst = JSON.parse(JSON.stringify(ast));
+  const newAst = cloneAST(ast);
   const textNodes = getTextNodes(newAst);
 
   if (nodeIndex >= textNodes.length) return newAst;
@@ -164,57 +207,54 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
 
 // 删除选区内容
 export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST: ASTNode[], newCursorPosition: CursorPosition } {
-  let newAst = JSON.parse(JSON.stringify(ast));
+  const newAst = cloneAST(ast);
+  const textNodes = getTextNodes(newAst);
+
+  // 验证选区有效性
+  if (!isValidSelection(selection, textNodes)) {
+    return { newAST: ast, newCursorPosition: selection.start };
+  }
+
   let newCursorPosition: CursorPosition;
 
   if (selection.hasSelection) {
     // 有选区时，删除选中内容
-    const startNodeIndex = selection.start.nodeIndex;
-    const endNodeIndex = selection.end.nodeIndex;
-    const startOffset = selection.start.textOffset;
-    const endOffset = selection.end.textOffset;
+    const { start, end } = selection;
 
     // 处理单个文本节点的情况
-    if (startNodeIndex === endNodeIndex) {
-      const textNodes = getTextNodes(newAst);
-      const targetNode = textNodes[startNodeIndex];
+    if (start.nodeIndex === end.nodeIndex) {
+      const targetNode = getTargetTextNode(newAst, start.nodeIndex);
 
       if (targetNode) {
-        const nodeValue = targetNode.value;
-        const beforeText = nodeValue.slice(0, startOffset);
-        const afterText = nodeValue.slice(endOffset);
+        const { before, after } = sliceText(targetNode.value, start.textOffset, end.textOffset);
 
         // 删除选中内容
-        targetNode.value = beforeText + afterText;
+        targetNode.value = before + after;
 
         // 设置新的光标位置（在删除内容的开始位置）
-        newCursorPosition = {
-          nodeIndex: startNodeIndex,
-          textOffset: startOffset,
-          isAtEnd: false
-        };
+        newCursorPosition = createCursorPosition(start.nodeIndex, start.textOffset);
       } else {
         // 如果找不到目标节点，回退到普通删除
-        newAst = deleteTextAtPosition(ast, selection.start, 1);
-        newCursorPosition = {
-          ...selection.start,
-          textOffset: Math.max(0, selection.start.textOffset - 1)
+        const fallbackResult = deleteTextAtPosition(ast, start, 1);
+        return {
+          newAST: fallbackResult,
+          newCursorPosition: createCursorPosition(start.nodeIndex, Math.max(0, start.textOffset - 1))
         };
       }
     } else {
       // 跨节点的情况，简化处理：在开始位置删除
-      newAst = deleteTextAtPosition(ast, selection.start, 1);
-      newCursorPosition = {
-        ...selection.start,
-        textOffset: Math.max(0, selection.start.textOffset - 1)
+      const fallbackResult = deleteTextAtPosition(ast, start, 1);
+      return {
+        newAST: fallbackResult,
+        newCursorPosition: createCursorPosition(start.nodeIndex, Math.max(0, start.textOffset - 1))
       };
     }
   } else {
     // 没有选区时，删除光标前一个字符
-    newAst = deleteTextAtPosition(ast, selection.start, 1);
-    newCursorPosition = {
-      ...selection.start,
-      textOffset: Math.max(0, selection.start.textOffset - 1)
+    const fallbackResult = deleteTextAtPosition(ast, selection.start, 1);
+    return {
+      newAST: fallbackResult,
+      newCursorPosition: createCursorPosition(selection.start.nodeIndex, Math.max(0, selection.start.textOffset - 1))
     };
   }
 
@@ -223,57 +263,54 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
 
 // 在选区位置插入文本（如果有选区则先删除选中内容）
 export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text: string): { newAST: ASTNode[], newCursorPosition: CursorPosition } {
-  let newAst = JSON.parse(JSON.stringify(ast));
+  const newAst = cloneAST(ast);
+  const textNodes = getTextNodes(newAst);
+
+  // 验证选区有效性
+  if (!isValidSelection(selection, textNodes)) {
+    return { newAST: ast, newCursorPosition: selection.start };
+  }
+
   let newCursorPosition: CursorPosition;
 
   if (selection.hasSelection) {
     // 有选区时，先删除选中内容，再插入新文本
-    const startNodeIndex = selection.start.nodeIndex;
-    const endNodeIndex = selection.end.nodeIndex;
-    const startOffset = selection.start.textOffset;
-    const endOffset = selection.end.textOffset;
+    const { start, end } = selection;
 
     // 处理单个文本节点的情况
-    if (startNodeIndex === endNodeIndex) {
-      const textNodes = getTextNodes(newAst);
-      const targetNode = textNodes[startNodeIndex];
+    if (start.nodeIndex === end.nodeIndex) {
+      const targetNode = getTargetTextNode(newAst, start.nodeIndex);
 
       if (targetNode) {
-        const nodeValue = targetNode.value;
-        const beforeText = nodeValue.slice(0, startOffset);
-        const afterText = nodeValue.slice(endOffset);
+        const { before, after } = sliceText(targetNode.value, start.textOffset, end.textOffset);
 
         // 删除选中内容并插入新文本
-        targetNode.value = beforeText + text + afterText;
+        targetNode.value = before + text + after;
 
         // 设置新的光标位置
-        newCursorPosition = {
-          nodeIndex: startNodeIndex,
-          textOffset: startOffset + text.length,
-          isAtEnd: false
-        };
+        newCursorPosition = createCursorPosition(start.nodeIndex, start.textOffset + text.length);
       } else {
         // 如果找不到目标节点，回退到普通插入
-        newAst = insertTextAtPosition(ast, selection.start, text);
-        newCursorPosition = {
-          ...selection.start,
-          textOffset: selection.start.textOffset + text.length
+        const fallbackResult = insertTextAtPosition(ast, start, text);
+        return {
+          newAST: fallbackResult,
+          newCursorPosition: createCursorPosition(start.nodeIndex, start.textOffset + text.length)
         };
       }
     } else {
       // 跨节点的情况，简化处理：在开始位置插入文本
-      newAst = insertTextAtPosition(ast, selection.start, text);
-      newCursorPosition = {
-        ...selection.start,
-        textOffset: selection.start.textOffset + text.length
+      const fallbackResult = insertTextAtPosition(ast, start, text);
+      return {
+        newAST: fallbackResult,
+        newCursorPosition: createCursorPosition(start.nodeIndex, start.textOffset + text.length)
       };
     }
   } else {
     // 没有选区时，正常插入
-    newAst = insertTextAtPosition(ast, selection.start, text);
-    newCursorPosition = {
-      ...selection.start,
-      textOffset: selection.start.textOffset + text.length
+    const fallbackResult = insertTextAtPosition(ast, selection.start, text);
+    return {
+      newAST: fallbackResult,
+      newCursorPosition: createCursorPosition(selection.start.nodeIndex, selection.start.textOffset + text.length)
     };
   }
 
@@ -284,62 +321,61 @@ export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text
 export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mark: Mark): ASTNode[] {
   if (!selection.hasSelection) return ast;
 
-  let newAst = JSON.parse(JSON.stringify(ast));
+  const newAst = cloneAST(ast);
   const textNodes = getTextNodes(newAst);
 
-  const startNodeIndex = selection.start.nodeIndex;
-  const endNodeIndex = selection.end.nodeIndex;
-  const startOffset = selection.start.textOffset;
-  const endOffset = selection.end.textOffset;
+  // 验证选区有效性
+  if (!isValidSelection(selection, textNodes)) {
+    return ast;
+  }
+
+  const { start, end } = selection;
 
   // 处理单个文本节点的情况
-  if (startNodeIndex === endNodeIndex) {
-    const targetNode = textNodes[startNodeIndex];
+  if (start.nodeIndex === end.nodeIndex) {
+    const targetNode = getTargetTextNode(newAst, start.nodeIndex);
     if (!targetNode) return newAst;
 
-    const nodeValue = targetNode.value;
-    const beforeText = nodeValue.slice(0, startOffset);
-    const selectedText = nodeValue.slice(startOffset, endOffset);
-    const afterText = nodeValue.slice(endOffset);
+    const { before, selected, after } = sliceText(targetNode.value, start.textOffset, end.textOffset);
 
     // 创建新的文本节点
     const newNodes: TextNode[] = [];
+    const baseMarks = targetNode.marks ? [...targetNode.marks] : [];
 
-    if (beforeText) {
+    if (before) {
       newNodes.push({
         type: "text",
-        value: beforeText,
-        marks: targetNode.marks ? [...targetNode.marks] : []
+        value: before,
+        marks: [...baseMarks]
       });
     }
 
-    if (selectedText) {
-      const selectedMarks = targetNode.marks ? [...targetNode.marks] : [];
+    if (selected) {
+      const selectedMarks = [...baseMarks];
       if (!selectedMarks.includes(mark)) {
         selectedMarks.push(mark);
       }
       newNodes.push({
         type: "text",
-        value: selectedText,
+        value: selected,
         marks: selectedMarks
       });
     }
 
-    if (afterText) {
+    if (after) {
       newNodes.push({
         type: "text",
-        value: afterText,
-        marks: targetNode.marks ? [...targetNode.marks] : []
+        value: after,
+        marks: [...baseMarks]
       });
     }
 
     // 替换原节点
-    newAst = replaceTextNodeInAST(newAst, startNodeIndex, newNodes);
+    return replaceTextNodeInAST(newAst, start.nodeIndex, newNodes);
   } else {
     // 处理跨节点的情况（简化版）
     // 这里可以实现更复杂的跨节点格式化逻辑
     console.log('跨节点选区格式化暂未实现');
+    return newAst;
   }
-
-  return newAst;
 }
