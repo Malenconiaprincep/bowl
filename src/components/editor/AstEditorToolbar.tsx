@@ -1,8 +1,8 @@
 import React, { useCallback } from "react";
 import type { EditorCommand } from "../../types/editor";
-import type { Mark, Selection, CursorPosition } from "../../utils/astUtils";
+import type { Mark, Selection, CursorPosition } from "../../utils";
 import { EditorToolbar } from "../toolbar/EditorToolbar";
-import { applyFormatToSelection, getTextNodes } from "../../utils/astUtils";
+import { applyFormatToSelection, getTextNodes } from "../../utils";
 import type { ASTNode } from "../../types/ast";
 
 interface AstEditorToolbarProps {

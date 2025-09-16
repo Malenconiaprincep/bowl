@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import type { ASTNode } from "../types/ast";
-import type { CursorPosition, Selection } from "../utils/astUtils";
-import { insertTextAtSelection, deleteSelection } from "../utils/astUtils";
+import type { CursorPosition, Selection } from "../utils";
+import { insertTextAtSelection, deleteSelection } from "../utils";
 
 export function useTextInput(
   ast: ASTNode[],
