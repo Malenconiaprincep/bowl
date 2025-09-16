@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useLayoutEffect } from "react";
 import type { ASTNode } from "../../types/ast";
 import { useCursorPosition } from "../../hooks/useCursorPosition";
 import { useTextInput } from "../../hooks/useTextInput";
@@ -73,18 +73,18 @@ export default function ASTEditor({
     isUpdatingFromState.current = true;
     setAst(newAST);
     onChange?.(newAST);
+  }, [onChange, isUpdatingFromState]);
 
-    // 延迟恢复光标位置
-    setTimeout(() => {
-      if (pendingCursorPosition.current) {
-        restoreCursorPosition(pendingCursorPosition.current);
-        pendingCursorPosition.current = null;
-      }
-      isUpdatingFromState.current = false;
-      // 检查激活状态
-      checkActiveCommands();
-    }, 0);
-  }, [onChange, restoreCursorPosition, checkActiveCommands, isUpdatingFromState, pendingCursorPosition]);
+  // 使用 useLayoutEffect 在 DOM 更新后立即恢复光标位置
+  useLayoutEffect(() => {
+    if (pendingCursorPosition.current) {
+      restoreCursorPosition(pendingCursorPosition.current);
+      pendingCursorPosition.current = null;
+    }
+    isUpdatingFromState.current = false;
+    // 检查激活状态
+    checkActiveCommands();
+  }, [ast, restoreCursorPosition, checkActiveCommands, pendingCursorPosition, isUpdatingFromState]);
 
   // 使用文本输入处理 hook
   const { handleKeyDown } = useTextInput(
