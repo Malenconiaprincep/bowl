@@ -186,8 +186,6 @@ function applyFormatToSelection(ast: ASTNode[], selection: Selection, mark: Mark
   return newAst;
 }
 
-
-
 export default function ASTEditor({
   initialAST,
   onChange
