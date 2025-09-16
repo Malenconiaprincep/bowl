@@ -87,7 +87,7 @@ export default function ASTEditor({
   }, [ast, restoreCursorPosition, checkActiveCommands, pendingCursorPosition, isUpdatingFromState]);
 
   // 使用文本输入处理 hook
-  const { handleKeyDown } = useTextInput(
+  const { handleBeforeInput, handleKeyDown } = useTextInput(
     ast,
     setCursorPosition,
     updateAST,
@@ -101,6 +101,7 @@ export default function ASTEditor({
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
+        onBeforeInput={handleBeforeInput}
         onKeyDown={handleKeyDown}
         onSelect={handleSelectionChange}
         onClick={handleClick}

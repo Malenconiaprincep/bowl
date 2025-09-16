@@ -32,23 +32,48 @@ export function useTextInput(
     onUpdateAST(newAST);
   }, [ast, selection, setCursorPosition, onUpdateAST, pendingCursorPosition]);
 
-  // 处理键盘事件
+  // 处理 beforeInput 事件
+  const handleBeforeInput = useCallback((e: React.FormEvent) => {
+    const inputEvent = e.nativeEvent as InputEvent;
+
+    // 处理插入文本
+    if (inputEvent.inputType === 'insertText' || inputEvent.inputType === 'insertCompositionText') {
+      e.preventDefault();
+      const text = inputEvent.data || '';
+      if (text) {
+        handleTextInput(text);
+      }
+      return;
+    }
+
+    // 处理删除操作
+    if (inputEvent.inputType === 'deleteContentBackward') {
+      e.preventDefault();
+      handleDelete();
+      return;
+    }
+
+    if (inputEvent.inputType === 'deleteContentForward') {
+      e.preventDefault();
+      handleDelete();
+      return;
+    }
+
+    // 处理其他输入类型（如粘贴等）
+    if (inputEvent.inputType === 'insertFromPaste') {
+      e.preventDefault();
+      const text = inputEvent.dataTransfer?.getData('text/plain') || '';
+      if (text) {
+        handleTextInput(text);
+      }
+      return;
+    }
+  }, [handleTextInput, handleDelete]);
+
+  // 处理键盘事件（保留用于快捷键）
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // 处理特殊键
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      handleDelete();
-      return;
-    }
-
-    if (e.key === 'Delete') {
-      e.preventDefault();
-      handleDelete();
-      return;
-    }
-
     // 处理快捷键
-    if (e.ctrlKey) {
+    if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       switch (e.key) {
         case 'b':
@@ -65,17 +90,12 @@ export function useTextInput(
           break;
       }
     }
-
-    // 处理普通字符输入
-    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      handleTextInput(e.key);
-    }
-  }, [handleTextInput, handleDelete]);
+  }, []);
 
   return {
     handleTextInput,
     handleDelete,
+    handleBeforeInput,
     handleKeyDown
   };
 }
