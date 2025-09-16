@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type { ASTNode } from "../types/ast";
 import type { CursorPosition, Selection } from "../utils/astUtils";
 import { insertTextAtSelection, deleteSelection } from "../utils/astUtils";
@@ -8,7 +8,8 @@ export function useTextInput(
   setCursorPosition: (position: CursorPosition) => void,
   onUpdateAST: (newAST: ASTNode[]) => void,
   pendingCursorPosition: React.MutableRefObject<CursorPosition | null>,
-  selection: Selection
+  selection: Selection,
+  editorRef: React.RefObject<HTMLDivElement | null>
 ) {
   // 处理文本输入
   const handleTextInput = useCallback((text: string) => {
@@ -32,43 +33,60 @@ export function useTextInput(
     onUpdateAST(newAST);
   }, [ast, selection, setCursorPosition, onUpdateAST, pendingCursorPosition]);
 
-  // 处理 beforeInput 事件
-  const handleBeforeInput = useCallback((e: React.FormEvent) => {
-    const inputEvent = e.nativeEvent as InputEvent;
+  // 使用原生事件监听器处理 beforeInput
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
 
-    // 处理插入文本
-    if (inputEvent.inputType === 'insertText' || inputEvent.inputType === 'insertCompositionText') {
-      e.preventDefault();
-      const text = inputEvent.data || '';
-      if (text) {
-        handleTextInput(text);
+    const handleBeforeInput = (e: Event) => {
+      const inputEvent = e as InputEvent;
+
+      console.log('原生 beforeInput 事件:', {
+        inputType: inputEvent.inputType,
+        data: inputEvent.data,
+        isComposing: inputEvent.isComposing
+      });
+
+      // 处理插入文本
+      if (inputEvent.inputType === 'insertText' || inputEvent.inputType === 'insertCompositionText') {
+        e.preventDefault();
+        const text = inputEvent.data || '';
+        if (text) {
+          handleTextInput(text);
+        }
+        return;
       }
-      return;
-    }
 
-    // 处理删除操作
-    if (inputEvent.inputType === 'deleteContentBackward') {
-      e.preventDefault();
-      handleDelete();
-      return;
-    }
-
-    if (inputEvent.inputType === 'deleteContentForward') {
-      e.preventDefault();
-      handleDelete();
-      return;
-    }
-
-    // 处理其他输入类型（如粘贴等）
-    if (inputEvent.inputType === 'insertFromPaste') {
-      e.preventDefault();
-      const text = inputEvent.dataTransfer?.getData('text/plain') || '';
-      if (text) {
-        handleTextInput(text);
+      // 处理删除操作
+      if (inputEvent.inputType === 'deleteContentBackward') {
+        e.preventDefault();
+        handleDelete();
+        return;
       }
-      return;
-    }
-  }, [handleTextInput, handleDelete]);
+
+      if (inputEvent.inputType === 'deleteContentForward') {
+        e.preventDefault();
+        handleDelete();
+        return;
+      }
+
+      // 处理其他输入类型（如粘贴等）
+      if (inputEvent.inputType === 'insertFromPaste') {
+        e.preventDefault();
+        const text = inputEvent.dataTransfer?.getData('text/plain') || '';
+        if (text) {
+          handleTextInput(text);
+        }
+        return;
+      }
+    };
+
+    editor.addEventListener('beforeinput', handleBeforeInput);
+
+    return () => {
+      editor.removeEventListener('beforeinput', handleBeforeInput);
+    };
+  }, [editorRef, handleTextInput, handleDelete]);
 
   // 处理键盘事件（保留用于快捷键）
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -95,7 +113,6 @@ export function useTextInput(
   return {
     handleTextInput,
     handleDelete,
-    handleBeforeInput,
     handleKeyDown
   };
 }
