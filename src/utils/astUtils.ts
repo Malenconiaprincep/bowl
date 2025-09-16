@@ -89,6 +89,73 @@ function isValidSelection(selection: Selection, textNodes: TextNode[]): boolean 
   return startValid && endValid;
 }
 
+// 处理跨节点选区删除和插入
+function handleCrossNodeSelection(ast: ASTNode[], selection: Selection, text: string): { newAST: ASTNode[], newCursorPosition: CursorPosition } {
+  const newAst = cloneAST(ast);
+  const { start, end } = selection;
+
+  // 删除跨节点的选中内容
+  // 1. 删除开始节点中选中部分
+  const startNode = getTargetTextNode(newAst, start.nodeIndex);
+  if (startNode) {
+    const { before } = sliceText(startNode.value, start.textOffset);
+    startNode.value = before;
+  }
+
+  // 2. 删除结束节点中选中部分
+  const endNode = getTargetTextNode(newAst, end.nodeIndex);
+  if (endNode) {
+    const { after } = sliceText(endNode.value, end.textOffset);
+    endNode.value = after;
+  }
+
+  // 3. 删除中间的所有节点（如果有的话）
+  for (let i = start.nodeIndex + 1; i < end.nodeIndex; i++) {
+    const node = getTargetTextNode(newAst, i);
+    if (node) {
+      node.value = '';
+    }
+  }
+
+  // 4. 在开始位置插入新文本（无样式）
+  if (startNode) {
+    startNode.value += text;
+  }
+
+  // 5. 合并相邻的空文本节点
+  const finalAst = mergeEmptyTextNodes(newAst);
+
+  return {
+    newAST: finalAst,
+    newCursorPosition: createCursorPosition(start.nodeIndex, start.textOffset + text.length)
+  };
+}
+
+// 合并空的文本节点
+function mergeEmptyTextNodes(ast: ASTNode[]): ASTNode[] {
+  const newAst = cloneAST(ast);
+  const textNodes = getTextNodes(newAst);
+
+  // 找到需要合并的节点
+  const nodesToMerge: number[] = [];
+  for (let i = 0; i < textNodes.length - 1; i++) {
+    if (textNodes[i].value === '' && textNodes[i + 1].value === '') {
+      nodesToMerge.push(i);
+    }
+  }
+
+  // 从后往前删除空节点，避免索引变化
+  for (let i = nodesToMerge.length - 1; i >= 0; i--) {
+    const nodeIndex = nodesToMerge[i];
+    const targetNode = getTargetTextNode(newAst, nodeIndex);
+    if (targetNode) {
+      targetNode.value = ''; // 标记为删除
+    }
+  }
+
+  return newAst;
+}
+
 // 建立 DOM 节点到文本节点的映射
 export function buildNodeMapping(container: HTMLElement, ast: ASTNode[]): NodeMapping[] {
   const mappings: NodeMapping[] = [];
@@ -242,12 +309,8 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
         };
       }
     } else {
-      // 跨节点的情况，简化处理：在开始位置删除
-      const fallbackResult = deleteTextAtPosition(ast, start, 1);
-      return {
-        newAST: fallbackResult,
-        newCursorPosition: createCursorPosition(start.nodeIndex, Math.max(0, start.textOffset - 1))
-      };
+      // 跨节点的情况：删除整个选中内容
+      return handleCrossNodeSelection(ast, selection, '');
     }
   } else {
     // 没有选区时，删除光标前一个字符
@@ -298,12 +361,8 @@ export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text
         };
       }
     } else {
-      // 跨节点的情况，简化处理：在开始位置插入文本
-      const fallbackResult = insertTextAtPosition(ast, start, text);
-      return {
-        newAST: fallbackResult,
-        newCursorPosition: createCursorPosition(start.nodeIndex, start.textOffset + text.length)
-      };
+      // 跨节点的情况：删除选中内容并插入新文本（无样式）
+      return handleCrossNodeSelection(ast, selection, text);
     }
   } else {
     // 没有选区时，正常插入
