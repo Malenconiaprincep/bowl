@@ -29,6 +29,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
       label: '下划线',
       icon: 'U',
       command: { type: 'underline' }
+    },
+    {
+      id: 'strikethrough',
+      label: '删除线',
+      icon: 'S',
+      command: { type: 'strikethrough' }
     }
   ];
 

@@ -17,7 +17,7 @@ export interface HistoryState {
 }
 
 export interface EditorCommand {
-  type: 'bold' | 'italic' | 'underline' | 'insertText' | 'deleteContent';
+  type: 'bold' | 'italic' | 'underline' | 'strikethrough' | 'insertText' | 'deleteContent';
   payload?: string;
 }
 

@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import type { ASTNode, Mark, TextNode } from "../../types/ast";
+import type { EditorCommand } from "../../types/editor";
+import { EditorToolbar } from "../toolbar/EditorToolbar";
 
 // 光标位置信息
 interface CursorPosition {
@@ -163,24 +165,104 @@ function deleteTextAtPosition(ast: ASTNode[], position: CursorPosition, length: 
   return newAst;
 }
 
+
+// 在 AST 中替换文本节点
+function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes: TextNode[]): ASTNode[] {
+  const newAst = JSON.parse(JSON.stringify(ast));
+  const textNodes = getTextNodes(newAst);
+
+  if (nodeIndex >= textNodes.length) return newAst;
+
+  // 找到要替换的文本节点在 AST 中的位置
+  let currentIndex = 0;
+
+  function replaceInNode(node: ASTNode): ASTNode {
+    if (node.type === "text") {
+      if (currentIndex === nodeIndex) {
+        // 如果只有一个新节点，直接替换
+        if (newNodes.length === 1) {
+          return newNodes[0];
+        }
+        // 如果有多个新节点，需要包装在 span 中
+        return {
+          type: "element",
+          tag: "span",
+          children: newNodes
+        };
+      }
+      currentIndex++;
+      return node;
+    } else if (node.type === "element") {
+      return {
+        ...node,
+        children: node.children.map(replaceInNode)
+      };
+    }
+    return node;
+  }
+
+  return newAst.map(replaceInNode);
+}
+
 // 应用格式化到选区
 function applyFormatToSelection(ast: ASTNode[], selection: Selection, mark: Mark): ASTNode[] {
   if (!selection.hasSelection) return ast;
 
-  const newAst = JSON.parse(JSON.stringify(ast));
+  let newAst = JSON.parse(JSON.stringify(ast));
   const textNodes = getTextNodes(newAst);
 
-  const startNode = textNodes[selection.start.nodeIndex];
-  const endNode = textNodes[selection.end.nodeIndex];
+  const startNodeIndex = selection.start.nodeIndex;
+  const endNodeIndex = selection.end.nodeIndex;
+  const startOffset = selection.start.textOffset;
+  const endOffset = selection.end.textOffset;
 
-  if (startNode && endNode) {
-    // 简化版：只处理单个文本节点的情况
-    if (selection.start.nodeIndex === selection.end.nodeIndex) {
-      if (!startNode.marks) startNode.marks = [];
-      if (!startNode.marks.includes(mark)) {
-        startNode.marks.push(mark);
-      }
+  // 处理单个文本节点的情况
+  if (startNodeIndex === endNodeIndex) {
+    const targetNode = textNodes[startNodeIndex];
+    if (!targetNode) return newAst;
+
+    const nodeValue = targetNode.value;
+    const beforeText = nodeValue.slice(0, startOffset);
+    const selectedText = nodeValue.slice(startOffset, endOffset);
+    const afterText = nodeValue.slice(endOffset);
+
+    // 创建新的文本节点
+    const newNodes: TextNode[] = [];
+
+    if (beforeText) {
+      newNodes.push({
+        type: "text",
+        value: beforeText,
+        marks: targetNode.marks ? [...targetNode.marks] : []
+      });
     }
+
+    if (selectedText) {
+      const selectedMarks = targetNode.marks ? [...targetNode.marks] : [];
+      if (!selectedMarks.includes(mark)) {
+        selectedMarks.push(mark);
+      }
+      newNodes.push({
+        type: "text",
+        value: selectedText,
+        marks: selectedMarks
+      });
+    }
+
+    if (afterText) {
+      newNodes.push({
+        type: "text",
+        value: afterText,
+        marks: targetNode.marks ? [...targetNode.marks] : []
+      });
+    }
+
+    // 替换原节点
+    newAst = replaceTextNodeInAST(newAst, startNodeIndex, newNodes);
+  } else {
+    // 处理跨节点的情况（简化版）
+    // 这里可以实现更复杂的跨节点格式化逻辑
+    console.log('跨节点选区格式化暂未实现');
   }
 
   return newAst;
@@ -200,6 +282,7 @@ export default function ASTEditor({
     end: { nodeIndex: 0, textOffset: 0, isAtEnd: false },
     hasSelection: false
   });
+  const [activeCommands, setActiveCommands] = useState<string[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromState = useRef(false);
   const pendingCursorPosition = useRef<CursorPosition | null>(null);
@@ -243,6 +326,18 @@ export default function ASTEditor({
     }
   }, [ast]);
 
+  // 检查当前光标位置的激活状态
+  const checkActiveCommands = useCallback(() => {
+    const textNodes = getTextNodes(ast);
+    const currentTextNode = textNodes[cursorPosition.nodeIndex];
+
+    if (currentTextNode && currentTextNode.marks) {
+      setActiveCommands(currentTextNode.marks);
+    } else {
+      setActiveCommands([]);
+    }
+  }, [ast, cursorPosition]);
+
   // 更新 AST 并触发回调
   const updateAST = useCallback((newAST: ASTNode[]) => {
     isUpdatingFromState.current = true;
@@ -256,8 +351,10 @@ export default function ASTEditor({
         pendingCursorPosition.current = null;
       }
       isUpdatingFromState.current = false;
+      // 检查激活状态
+      checkActiveCommands();
     }, 0);
-  }, [onChange, restoreCursorPosition]);
+  }, [onChange, restoreCursorPosition, checkActiveCommands]);
 
   // 处理文本输入
   const handleTextInput = useCallback((text: string) => {
@@ -324,6 +421,18 @@ export default function ASTEditor({
 
       setSelection(prev => ({ ...prev, hasSelection: false }));
       setCursorPosition(cursorPos);
+
+      // 检查激活状态
+      setTimeout(() => {
+        const textNodes = getTextNodes(ast);
+        const currentTextNode = textNodes[cursorPos.nodeIndex];
+
+        if (currentTextNode && currentTextNode.marks) {
+          setActiveCommands(currentTextNode.marks);
+        } else {
+          setActiveCommands([]);
+        }
+      }, 0);
     }
   }, [ast]);
 
@@ -348,6 +457,24 @@ export default function ASTEditor({
       }
     }
   }, [ast, selection, cursorPosition, updateAST]);
+
+  // 处理工具栏命令
+  const handleToolbarCommand = useCallback((command: EditorCommand) => {
+    switch (command.type) {
+      case 'bold':
+        executeCommand('b');
+        break;
+      case 'italic':
+        executeCommand('i');
+        break;
+      case 'underline':
+        executeCommand('u');
+        break;
+      case 'strikethrough':
+        executeCommand('s');
+        break;
+    }
+  }, [executeCommand]);
 
   // 处理键盘事件
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -415,12 +542,10 @@ export default function ASTEditor({
       >
         {ast.map((node, idx) => renderNode(node, idx))}
       </div>
-      <div style={{ marginTop: 10, display: 'flex', gap: 10 }}>
-        <button onClick={() => executeCommand('b')}>Bold (Ctrl+B)</button>
-        <button onClick={() => executeCommand('i')}>Italic (Ctrl+I)</button>
-        <button onClick={() => executeCommand('u')}>Underline (Ctrl+U)</button>
-        <button onClick={() => executeCommand('s')}>Strikethrough (Ctrl+S)</button>
-      </div>
+      <EditorToolbar
+        onCommand={handleToolbarCommand}
+        activeCommands={activeCommands}
+      />
       <div style={{ marginTop: 10, fontSize: '12px', color: '#666' }}>
         <p>光标位置: 节点 {cursorPosition.nodeIndex}, 偏移 {cursorPosition.textOffset}</p>
         <p>选区: {selection.hasSelection ? `从 ${selection.start.textOffset} 到 ${selection.end.textOffset}` : '无'}</p>
