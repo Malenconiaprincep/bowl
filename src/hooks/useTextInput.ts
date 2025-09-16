@@ -1,31 +1,26 @@
 import { useCallback } from "react";
 import type { ASTNode } from "../types/ast";
-import type { CursorPosition } from "../utils/astUtils";
-import { insertTextAtPosition, deleteTextAtPosition } from "../utils/astUtils";
+import type { CursorPosition, Selection } from "../utils/astUtils";
+import { insertTextAtSelection, deleteTextAtPosition } from "../utils/astUtils";
 
 export function useTextInput(
   ast: ASTNode[],
   cursorPosition: CursorPosition,
   setCursorPosition: (position: CursorPosition) => void,
   onUpdateAST: (newAST: ASTNode[]) => void,
-  pendingCursorPosition: React.MutableRefObject<CursorPosition | null>
+  pendingCursorPosition: React.MutableRefObject<CursorPosition | null>,
+  selection: Selection
 ) {
   // 处理文本输入
   const handleTextInput = useCallback((text: string) => {
-    const newAST = insertTextAtPosition(ast, cursorPosition, text);
-
-    // 保存新的光标位置
-    const newCursorPosition = {
-      ...cursorPosition,
-      textOffset: cursorPosition.textOffset + text.length
-    };
+    const { newAST, newCursorPosition } = insertTextAtSelection(ast, selection, text);
 
     // 设置待恢复的光标位置
     pendingCursorPosition.current = newCursorPosition;
     setCursorPosition(newCursorPosition);
 
     onUpdateAST(newAST);
-  }, [ast, cursorPosition, setCursorPosition, onUpdateAST, pendingCursorPosition]);
+  }, [ast, selection, setCursorPosition, onUpdateAST, pendingCursorPosition]);
 
   // 处理删除操作
   const handleDelete = useCallback((length: number = 1) => {

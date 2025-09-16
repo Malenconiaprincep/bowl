@@ -110,8 +110,13 @@ export function useCursorPosition(ast: ASTNode[]) {
         cursorPos
       });
 
-      setSelection(prev => ({ ...prev, hasSelection: false }));
+      // 更新光标位置和选区信息，确保它们同步
       setCursorPosition(cursorPos);
+      setSelection({
+        start: cursorPos,
+        end: cursorPos,
+        hasSelection: false
+      });
 
       // 检查激活状态
       setTimeout(() => {

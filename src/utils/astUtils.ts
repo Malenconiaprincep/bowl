@@ -162,6 +162,65 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
   return newAst.map(replaceInNode);
 }
 
+// 在选区位置插入文本（如果有选区则先删除选中内容）
+export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text: string): { newAST: ASTNode[], newCursorPosition: CursorPosition } {
+  let newAst = JSON.parse(JSON.stringify(ast));
+  let newCursorPosition: CursorPosition;
+
+  if (selection.hasSelection) {
+    // 有选区时，先删除选中内容，再插入新文本
+    const startNodeIndex = selection.start.nodeIndex;
+    const endNodeIndex = selection.end.nodeIndex;
+    const startOffset = selection.start.textOffset;
+    const endOffset = selection.end.textOffset;
+
+    // 处理单个文本节点的情况
+    if (startNodeIndex === endNodeIndex) {
+      const textNodes = getTextNodes(newAst);
+      const targetNode = textNodes[startNodeIndex];
+
+      if (targetNode) {
+        const nodeValue = targetNode.value;
+        const beforeText = nodeValue.slice(0, startOffset);
+        const afterText = nodeValue.slice(endOffset);
+
+        // 删除选中内容并插入新文本
+        targetNode.value = beforeText + text + afterText;
+
+        // 设置新的光标位置
+        newCursorPosition = {
+          nodeIndex: startNodeIndex,
+          textOffset: startOffset + text.length,
+          isAtEnd: false
+        };
+      } else {
+        // 如果找不到目标节点，回退到普通插入
+        newAst = insertTextAtPosition(ast, selection.start, text);
+        newCursorPosition = {
+          ...selection.start,
+          textOffset: selection.start.textOffset + text.length
+        };
+      }
+    } else {
+      // 跨节点的情况，简化处理：在开始位置插入文本
+      newAst = insertTextAtPosition(ast, selection.start, text);
+      newCursorPosition = {
+        ...selection.start,
+        textOffset: selection.start.textOffset + text.length
+      };
+    }
+  } else {
+    // 没有选区时，正常插入
+    newAst = insertTextAtPosition(ast, selection.start, text);
+    newCursorPosition = {
+      ...selection.start,
+      textOffset: selection.start.textOffset + text.length
+    };
+  }
+
+  return { newAST: newAst, newCursorPosition };
+}
+
 // 应用格式化到选区
 export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mark: Mark): ASTNode[] {
   if (!selection.hasSelection) return ast;

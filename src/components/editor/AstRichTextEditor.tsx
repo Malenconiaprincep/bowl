@@ -92,7 +92,8 @@ export default function ASTEditor({
     cursorPosition,
     setCursorPosition,
     updateAST,
-    pendingCursorPosition
+    pendingCursorPosition,
+    selection
   );
 
   return (
