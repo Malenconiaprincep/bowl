@@ -89,7 +89,6 @@ export default function ASTEditor({
   // 使用文本输入处理 hook
   const { handleKeyDown } = useTextInput(
     ast,
-    cursorPosition,
     setCursorPosition,
     updateAST,
     pendingCursorPosition,

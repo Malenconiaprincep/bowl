@@ -116,8 +116,8 @@ export function deleteTextAtPosition(ast: ASTNode[], position: CursorPosition, l
   const targetNode = textNodes[position.nodeIndex];
 
   if (targetNode) {
-    const before = targetNode.value.slice(0, position.textOffset);
-    const after = targetNode.value.slice(position.textOffset + length);
+    const before = targetNode.value.slice(0, position.textOffset - length);
+    const after = targetNode.value.slice(position.textOffset);
     targetNode.value = before + after;
   }
 
@@ -160,6 +160,65 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
   }
 
   return newAst.map(replaceInNode);
+}
+
+// 删除选区内容
+export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST: ASTNode[], newCursorPosition: CursorPosition } {
+  let newAst = JSON.parse(JSON.stringify(ast));
+  let newCursorPosition: CursorPosition;
+
+  if (selection.hasSelection) {
+    // 有选区时，删除选中内容
+    const startNodeIndex = selection.start.nodeIndex;
+    const endNodeIndex = selection.end.nodeIndex;
+    const startOffset = selection.start.textOffset;
+    const endOffset = selection.end.textOffset;
+
+    // 处理单个文本节点的情况
+    if (startNodeIndex === endNodeIndex) {
+      const textNodes = getTextNodes(newAst);
+      const targetNode = textNodes[startNodeIndex];
+
+      if (targetNode) {
+        const nodeValue = targetNode.value;
+        const beforeText = nodeValue.slice(0, startOffset);
+        const afterText = nodeValue.slice(endOffset);
+
+        // 删除选中内容
+        targetNode.value = beforeText + afterText;
+
+        // 设置新的光标位置（在删除内容的开始位置）
+        newCursorPosition = {
+          nodeIndex: startNodeIndex,
+          textOffset: startOffset,
+          isAtEnd: false
+        };
+      } else {
+        // 如果找不到目标节点，回退到普通删除
+        newAst = deleteTextAtPosition(ast, selection.start, 1);
+        newCursorPosition = {
+          ...selection.start,
+          textOffset: Math.max(0, selection.start.textOffset - 1)
+        };
+      }
+    } else {
+      // 跨节点的情况，简化处理：在开始位置删除
+      newAst = deleteTextAtPosition(ast, selection.start, 1);
+      newCursorPosition = {
+        ...selection.start,
+        textOffset: Math.max(0, selection.start.textOffset - 1)
+      };
+    }
+  } else {
+    // 没有选区时，删除光标前一个字符
+    newAst = deleteTextAtPosition(ast, selection.start, 1);
+    newCursorPosition = {
+      ...selection.start,
+      textOffset: Math.max(0, selection.start.textOffset - 1)
+    };
+  }
+
+  return { newAST: newAst, newCursorPosition };
 }
 
 // 在选区位置插入文本（如果有选区则先删除选中内容）
