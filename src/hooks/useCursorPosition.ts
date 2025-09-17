@@ -1,30 +1,27 @@
 import { useState, useRef, useCallback } from "react";
 import type { ASTNode } from "../types/ast";
-import type { CursorPosition, Selection } from "../utils";
-import { findTextNodeIndex, getTextNodes } from "../utils";
+import type { Selection } from "../utils";
+import { findSelectionOffsetFromDOM, getTextNodes, findNodeAndOffsetBySelectionOffset } from "../utils";
 
 export function useCursorPosition(ast: ASTNode[]) {
-  const [cursorPosition, setCursorPosition] = useState<CursorPosition>({
-    nodeIndex: 0,
-    textOffset: 0,
-    isAtEnd: false
-  });
+  const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [selection, setSelection] = useState<Selection>({
-    start: { nodeIndex: 0, textOffset: 0, isAtEnd: false },
-    end: { nodeIndex: 0, textOffset: 0, isAtEnd: false },
+    start: 0,
+    end: 0,
     hasSelection: false
   });
   const [activeCommands, setActiveCommands] = useState<string[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromState = useRef(false);
-  const pendingCursorPosition = useRef<CursorPosition | null>(null);
+  const pendingCursorPosition = useRef<number | null>(null);
 
   // 恢复光标位置
-  const restoreCursorPosition = useCallback((position: CursorPosition) => {
+  const restoreCursorPosition = useCallback((position: number) => {
     if (!editorRef.current) return;
 
     const textNodes = getTextNodes(ast);
-    const targetNode = textNodes[position.nodeIndex];
+    const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, position);
+    const targetNode = textNodes[nodeIndex];
 
     if (targetNode) {
       // 找到对应的 DOM 文本节点
@@ -38,7 +35,7 @@ export function useCursorPosition(ast: ASTNode[]) {
       let targetTextNode = null;
 
       while (walker.nextNode()) {
-        if (currentIndex === position.nodeIndex) {
+        if (currentIndex === nodeIndex) {
           targetTextNode = walker.currentNode;
           break;
         }
@@ -47,7 +44,7 @@ export function useCursorPosition(ast: ASTNode[]) {
 
       if (targetTextNode) {
         const range = document.createRange();
-        const offset = Math.min(position.textOffset, targetTextNode.textContent?.length || 0);
+        const offset = Math.min(textOffset, targetTextNode.textContent?.length || 0);
         range.setStart(targetTextNode, offset);
         range.setEnd(targetTextNode, offset);
 
@@ -61,7 +58,8 @@ export function useCursorPosition(ast: ASTNode[]) {
   // 检查当前光标位置的激活状态
   const checkActiveCommands = useCallback(() => {
     const textNodes = getTextNodes(ast);
-    const currentTextNode = textNodes[cursorPosition.nodeIndex];
+    const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, cursorPosition);
+    const currentTextNode = textNodes[nodeIndex];
 
     if (currentTextNode && currentTextNode.marks) {
       setActiveCommands(currentTextNode.marks);
@@ -82,8 +80,8 @@ export function useCursorPosition(ast: ASTNode[]) {
 
     if (hasSelection) {
       // 计算选区的开始和结束位置
-      const startPosition = findTextNodeIndex(editorRef.current, ast, range.startContainer, range.startOffset);
-      const endPosition = findTextNodeIndex(editorRef.current, ast, range.endContainer, range.endOffset);
+      const startPosition = findSelectionOffsetFromDOM(editorRef.current, ast, range.startContainer, range.startOffset);
+      const endPosition = findSelectionOffsetFromDOM(editorRef.current, ast, range.endContainer, range.endOffset);
 
       console.log('选区信息:', {
         startContainer: range.startContainer,
@@ -101,7 +99,7 @@ export function useCursorPosition(ast: ASTNode[]) {
       });
     } else {
       // 计算光标位置
-      const cursorPos = findTextNodeIndex(editorRef.current, ast, range.startContainer, range.startOffset);
+      const cursorPos = findSelectionOffsetFromDOM(editorRef.current, ast, range.startContainer, range.startOffset);
 
       console.log('光标信息:', {
         container: range.startContainer,
@@ -121,7 +119,8 @@ export function useCursorPosition(ast: ASTNode[]) {
       // 检查激活状态
       setTimeout(() => {
         const textNodes = getTextNodes(ast);
-        const currentTextNode = textNodes[cursorPos.nodeIndex];
+        const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, cursorPos);
+        const currentTextNode = textNodes[nodeIndex];
 
         if (currentTextNode && currentTextNode.marks) {
           setActiveCommands(currentTextNode.marks);

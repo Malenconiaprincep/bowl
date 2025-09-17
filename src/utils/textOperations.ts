@@ -1,7 +1,7 @@
 import type { ASTNode } from "../types/ast";
 import { cloneAST, getTextNodes, getTargetTextNode, mergeEmptyTextNodes } from "./core";
-import type { CursorPosition, Selection } from "./selection";
-import { createCursorPosition, isValidSelection } from "./selection";
+import type { Selection } from "./selection";
+import { isValidSelection, findNodeAndOffsetBySelectionOffset } from "./selection";
 
 // 文本切片操作
 function sliceText(text: string, startOffset: number, endOffset?: number): {
@@ -17,27 +17,32 @@ function sliceText(text: string, startOffset: number, endOffset?: number): {
 }
 
 // 处理跨节点选区删除和插入
-function handleCrossNodeSelection(ast: ASTNode[], selection: Selection, text: string): { newAST: ASTNode[], newCursorPosition: CursorPosition } {
+function handleCrossNodeSelection(ast: ASTNode[], selection: Selection, text: string): { newAST: ASTNode[], newCursorPosition: number } {
   const newAst = cloneAST(ast);
   const { start, end } = selection;
+  const textNodes = getTextNodes(newAst);
+
+  // 找到开始和结束位置对应的节点
+  const startPos = findNodeAndOffsetBySelectionOffset(textNodes, start);
+  const endPos = findNodeAndOffsetBySelectionOffset(textNodes, end);
 
   // 删除跨节点的选中内容
   // 1. 删除开始节点中选中部分
-  const startNode = getTargetTextNode(newAst, start.nodeIndex);
+  const startNode = getTargetTextNode(newAst, startPos.nodeIndex);
   if (startNode) {
-    const { before } = sliceText(startNode.value, start.textOffset);
+    const { before } = sliceText(startNode.value, startPos.textOffset);
     startNode.value = before;
   }
 
   // 2. 删除结束节点中选中部分
-  const endNode = getTargetTextNode(newAst, end.nodeIndex);
+  const endNode = getTargetTextNode(newAst, endPos.nodeIndex);
   if (endNode) {
-    const { after } = sliceText(endNode.value, end.textOffset);
+    const { after } = sliceText(endNode.value, endPos.textOffset);
     endNode.value = after;
   }
 
   // 3. 删除中间的所有节点（如果有的话）
-  for (let i = start.nodeIndex + 1; i < end.nodeIndex; i++) {
+  for (let i = startPos.nodeIndex + 1; i < endPos.nodeIndex; i++) {
     const node = getTargetTextNode(newAst, i);
     if (node) {
       node.value = '';
@@ -52,19 +57,29 @@ function handleCrossNodeSelection(ast: ASTNode[], selection: Selection, text: st
   // 5. 合并相邻的空文本节点
   const finalAst = mergeEmptyTextNodes(newAst);
 
+  const newOffset = start + text.length;
   return {
     newAST: finalAst,
-    newCursorPosition: createCursorPosition(start.nodeIndex, start.textOffset + text.length)
+    newCursorPosition: newOffset
   };
 }
 
 // 在指定位置插入文本
-export function insertTextAtPosition(ast: ASTNode[], position: CursorPosition, text: string): ASTNode[] {
+export function insertTextAtPosition(ast: ASTNode[], position: number, text: string): ASTNode[] {
   const newAst = cloneAST(ast);
-  const targetNode = getTargetTextNode(newAst, position.nodeIndex);
+  const textNodes = getTextNodes(newAst);
+
+  // 检查位置是否有效
+  const totalLength = textNodes.reduce((sum, node) => sum + node.value.length, 0);
+  if (position < 0 || position > totalLength) {
+    return ast; // 无效位置，返回原始 AST
+  }
+
+  const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, position);
+  const targetNode = getTargetTextNode(newAst, nodeIndex);
 
   if (targetNode) {
-    const { before, after } = sliceText(targetNode.value, position.textOffset);
+    const { before, after } = sliceText(targetNode.value, textOffset);
     targetNode.value = before + text + after;
   }
 
@@ -72,12 +87,21 @@ export function insertTextAtPosition(ast: ASTNode[], position: CursorPosition, t
 }
 
 // 在指定位置删除文本
-export function deleteTextAtPosition(ast: ASTNode[], position: CursorPosition, length: number = 1): ASTNode[] {
+export function deleteTextAtPosition(ast: ASTNode[], position: number, length: number = 1): ASTNode[] {
   const newAst = cloneAST(ast);
-  const targetNode = getTargetTextNode(newAst, position.nodeIndex);
+  const textNodes = getTextNodes(newAst);
+
+  // 检查位置是否有效
+  const totalLength = textNodes.reduce((sum, node) => sum + node.value.length, 0);
+  if (position < 0 || position > totalLength) {
+    return ast; // 无效位置，返回原始 AST
+  }
+
+  const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, position);
+  const targetNode = getTargetTextNode(newAst, nodeIndex);
 
   if (targetNode) {
-    const { before, after } = sliceText(targetNode.value, position.textOffset - length, position.textOffset);
+    const { before, after } = sliceText(targetNode.value, textOffset - length, textOffset);
     targetNode.value = before + after;
   }
 
@@ -85,7 +109,7 @@ export function deleteTextAtPosition(ast: ASTNode[], position: CursorPosition, l
 }
 
 // 删除选区内容
-export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST: ASTNode[], newCursorPosition: CursorPosition } {
+export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST: ASTNode[], newCursorPosition: number } {
   const newAst = cloneAST(ast);
   const textNodes = getTextNodes(newAst);
 
@@ -94,30 +118,32 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
     return { newAST: ast, newCursorPosition: selection.start };
   }
 
-  let newCursorPosition: CursorPosition;
+  let newCursorPosition: number;
 
   if (selection.hasSelection) {
     // 有选区时，删除选中内容
     const { start, end } = selection;
+    const startPos = findNodeAndOffsetBySelectionOffset(textNodes, start);
+    const endPos = findNodeAndOffsetBySelectionOffset(textNodes, end);
 
     // 处理单个文本节点的情况
-    if (start.nodeIndex === end.nodeIndex) {
-      const targetNode = getTargetTextNode(newAst, start.nodeIndex);
+    if (startPos.nodeIndex === endPos.nodeIndex) {
+      const targetNode = getTargetTextNode(newAst, startPos.nodeIndex);
 
       if (targetNode) {
-        const { before, after } = sliceText(targetNode.value, start.textOffset, end.textOffset);
+        const { before, after } = sliceText(targetNode.value, startPos.textOffset, endPos.textOffset);
 
         // 删除选中内容
         targetNode.value = before + after;
 
         // 设置新的光标位置（在删除内容的开始位置）
-        newCursorPosition = createCursorPosition(start.nodeIndex, start.textOffset);
+        newCursorPosition = start;
       } else {
         // 如果找不到目标节点，回退到普通删除
         const fallbackResult = deleteTextAtPosition(ast, start, 1);
         return {
           newAST: fallbackResult,
-          newCursorPosition: createCursorPosition(start.nodeIndex, Math.max(0, start.textOffset - 1))
+          newCursorPosition: Math.max(0, start - 1)
         };
       }
     } else {
@@ -129,7 +155,7 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
     const fallbackResult = deleteTextAtPosition(ast, selection.start, 1);
     return {
       newAST: fallbackResult,
-      newCursorPosition: createCursorPosition(selection.start.nodeIndex, Math.max(0, selection.start.textOffset - 1))
+      newCursorPosition: Math.max(0, selection.start - 1)
     };
   }
 
@@ -137,7 +163,7 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
 }
 
 // 在选区位置插入文本（如果有选区则先删除选中内容）
-export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text: string): { newAST: ASTNode[], newCursorPosition: CursorPosition } {
+export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text: string): { newAST: ASTNode[], newCursorPosition: number } {
   const newAst = cloneAST(ast);
   const textNodes = getTextNodes(newAst);
 
@@ -146,30 +172,33 @@ export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text
     return { newAST: ast, newCursorPosition: selection.start };
   }
 
-  let newCursorPosition: CursorPosition;
+  let newCursorPosition: number;
 
   if (selection.hasSelection) {
     // 有选区时，先删除选中内容，再插入新文本
     const { start, end } = selection;
+    const startPos = findNodeAndOffsetBySelectionOffset(textNodes, start);
+    const endPos = findNodeAndOffsetBySelectionOffset(textNodes, end);
 
     // 处理单个文本节点的情况
-    if (start.nodeIndex === end.nodeIndex) {
-      const targetNode = getTargetTextNode(newAst, start.nodeIndex);
+    if (startPos.nodeIndex === endPos.nodeIndex) {
+      const targetNode = getTargetTextNode(newAst, startPos.nodeIndex);
 
       if (targetNode) {
-        const { before, after } = sliceText(targetNode.value, start.textOffset, end.textOffset);
+        const { before, after } = sliceText(targetNode.value, startPos.textOffset, endPos.textOffset);
 
         // 删除选中内容并插入新文本
         targetNode.value = before + text + after;
 
         // 设置新的光标位置
-        newCursorPosition = createCursorPosition(start.nodeIndex, start.textOffset + text.length);
+        newCursorPosition = start + text.length;
       } else {
         // 如果找不到目标节点，回退到普通插入
         const fallbackResult = insertTextAtPosition(ast, start, text);
+        const newOffset = start + text.length;
         return {
           newAST: fallbackResult,
-          newCursorPosition: createCursorPosition(start.nodeIndex, start.textOffset + text.length)
+          newCursorPosition: newOffset
         };
       }
     } else {
@@ -179,9 +208,10 @@ export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text
   } else {
     // 没有选区时，正常插入
     const fallbackResult = insertTextAtPosition(ast, selection.start, text);
+    const newOffset = selection.start + text.length;
     return {
       newAST: fallbackResult,
-      newCursorPosition: createCursorPosition(selection.start.nodeIndex, selection.start.textOffset + text.length)
+      newCursorPosition: newOffset
     };
   }
 

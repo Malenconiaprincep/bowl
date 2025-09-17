@@ -1,6 +1,6 @@
 import React, { useCallback } from "react";
 import type { EditorCommand } from "../../types/editor";
-import type { Mark, Selection, CursorPosition } from "../../utils";
+import type { Mark, Selection } from "../../utils";
 import { EditorToolbar } from "../toolbar/EditorToolbar";
 import { applyFormatToSelection, getTextNodes } from "../../utils";
 import type { ASTNode } from "../../types/ast";
@@ -8,7 +8,7 @@ import type { ASTNode } from "../../types/ast";
 interface AstEditorToolbarProps {
   ast: ASTNode[];
   selection: Selection;
-  cursorPosition: CursorPosition;
+  cursorPosition: number;
   activeCommands: string[];
   onUpdateAST: (newAST: ASTNode[]) => void;
 }

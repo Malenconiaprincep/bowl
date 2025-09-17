@@ -116,8 +116,8 @@ export default function ASTEditor({
       />
 
       <div style={{ marginTop: 10, fontSize: '12px', color: '#666' }}>
-        <p>光标位置: 节点 {cursorPosition.nodeIndex}, 偏移 {cursorPosition.textOffset}</p>
-        <p>选区: {selection.hasSelection ? `从 ${selection.start.textOffset} 到 ${selection.end.textOffset}` : '无'}</p>
+        <p>光标位置: 偏移 {cursorPosition}</p>
+        <p>选区: {selection.hasSelection ? `从 ${selection.start} 到 ${selection.end}` : '无'}</p>
       </div>
     </div>
   );

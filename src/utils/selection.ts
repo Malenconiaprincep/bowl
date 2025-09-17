@@ -1,17 +1,13 @@
 import type { ASTNode, TextNode } from "../types/ast";
 import { getTextNodes } from "./core";
 
-// 光标位置信息
-export interface CursorPosition {
-  nodeIndex: number;  // 在文本节点列表中的索引
-  textOffset: number; // 在文本节点中的字符偏移
-  isAtEnd: boolean;   // 是否在节点末尾
-}
+// 光标位置信息 - 使用全局字符偏移量
+export type CursorPosition = number;
 
 // 选区信息
 export interface Selection {
-  start: CursorPosition;
-  end: CursorPosition;
+  start: number;
+  end: number;
   hasSelection: boolean;
 }
 
@@ -22,25 +18,21 @@ export interface NodeMapping {
   textOffset: number;
 }
 
-// 创建光标位置
-export function createCursorPosition(nodeIndex: number, textOffset: number, isAtEnd: boolean = false): CursorPosition {
-  return { nodeIndex, textOffset, isAtEnd };
-}
+
 
 // 验证选区是否有效
 export function isValidSelection(selection: Selection, textNodes: TextNode[]): boolean {
   if (!selection.hasSelection) return true;
 
   const { start, end } = selection;
-  const startNode = textNodes[start.nodeIndex];
-  const endNode = textNodes[end.nodeIndex];
+  const totalLength = textNodes.reduce((sum, node) => sum + node.value.length, 0);
 
-  if (!startNode || !endNode) return false;
+  const startValid = start >= 0 && start <= totalLength;
+  const endValid = end >= 0 && end <= totalLength;
+  const hasContent = start < end; // 选区必须有实际内容
+  const orderValid = start <= end; // 开始位置不能大于结束位置
 
-  const startValid = start.textOffset >= 0 && start.textOffset <= startNode.value.length;
-  const endValid = end.textOffset >= 0 && end.textOffset <= endNode.value.length;
-
-  return startValid && endValid;
+  return startValid && endValid && hasContent && orderValid;
 }
 
 // 建立 DOM 节点到文本节点的映射
@@ -73,24 +65,57 @@ export function buildNodeMapping(container: HTMLElement, ast: ASTNode[]): NodeMa
   return mappings;
 }
 
-// 根据 DOM 位置找到对应的文本节点索引
-export function findTextNodeIndex(container: HTMLElement, ast: ASTNode[], domNode: Node, offset: number): CursorPosition {
+// 根据 selectionOffset 找到对应的文本节点和偏移量
+export function findNodeAndOffsetBySelectionOffset(textNodes: TextNode[], selectionOffset: number): { nodeIndex: number; textOffset: number } {
+  let currentOffset = 0;
+
+  for (let i = 0; i < textNodes.length; i++) {
+    const nodeLength = textNodes[i].value.length;
+
+    if (selectionOffset <= currentOffset + nodeLength) {
+      return {
+        nodeIndex: i,
+        textOffset: selectionOffset - currentOffset
+      };
+    }
+
+    currentOffset += nodeLength;
+  }
+
+  // 如果超出范围，返回最后一个节点
+  const lastIndex = textNodes.length - 1;
+  return {
+    nodeIndex: lastIndex,
+    textOffset: textNodes[lastIndex]?.value.length || 0
+  };
+}
+
+// 根据文本节点索引和偏移量计算 selectionOffset
+export function calculateSelectionOffset(textNodes: TextNode[], nodeIndex: number, textOffset: number): number {
+  let selectionOffset = 0;
+
+  for (let i = 0; i < nodeIndex && i < textNodes.length; i++) {
+    selectionOffset += textNodes[i].value.length;
+  }
+
+  return selectionOffset + Math.min(textOffset, textNodes[nodeIndex]?.value.length || 0);
+}
+
+
+// 根据 DOM 位置找到对应的 selectionOffset
+export function findSelectionOffsetFromDOM(container: HTMLElement, ast: ASTNode[], domNode: Node, offset: number): number {
   const mappings = buildNodeMapping(container, ast);
+  const textNodes = getTextNodes(ast);
 
   for (const mapping of mappings) {
     if (mapping.domNode === domNode) {
-      return {
-        nodeIndex: mapping.textNodeIndex,
-        textOffset: offset, // 使用 DOM 中的实际偏移量
-        isAtEnd: offset >= (mapping.domNode.textContent?.length || 0)
-      };
+      const selectionOffset = calculateSelectionOffset(textNodes, mapping.textNodeIndex, offset);
+      return selectionOffset;
     }
   }
 
-  // 如果没找到，返回第一个文本节点
-  return {
-    nodeIndex: 0,
-    textOffset: 0,
-    isAtEnd: false
-  };
+  // 如果没找到，返回开始位置
+  return 0;
 }
+
+

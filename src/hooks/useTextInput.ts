@@ -1,13 +1,13 @@
 import { useCallback, useEffect } from "react";
 import type { ASTNode } from "../types/ast";
-import type { CursorPosition, Selection } from "../utils";
+import type { Selection } from "../utils";
 import { insertTextAtSelection, deleteSelection } from "../utils";
 
 export function useTextInput(
   ast: ASTNode[],
-  setCursorPosition: (position: CursorPosition) => void,
+  setCursorPosition: (position: number) => void,
   onUpdateAST: (newAST: ASTNode[]) => void,
-  pendingCursorPosition: React.MutableRefObject<CursorPosition | null>,
+  pendingCursorPosition: React.MutableRefObject<number | null>,
   selection: Selection,
   editorRef: React.RefObject<HTMLDivElement | null>
 ) {
