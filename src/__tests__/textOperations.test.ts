@@ -24,6 +24,20 @@ const createTestAST = (): ASTNode[] => [
   createTextNode('!')
 ];
 
+// 基于用户实际数据的测试用例
+const createRealWorldAST = (): ASTNode[] => [
+  {
+    type: "element",
+    tag: "p",
+    children: [
+      { type: "text", value: "Hello " },
+      { type: "text", value: "Wor", marks: ["b"] },
+      { type: "text", value: "ld", marks: ["i", "b"] },
+      { type: "text", value: "! 这是一个可编辑的 AST 编辑器。" },
+    ],
+  },
+];
+
 describe('textOperations', () => {
   describe('insertTextAtPosition', () => {
     it('应该在指定位置插入文本', () => {
@@ -160,9 +174,13 @@ describe('textOperations', () => {
       const result = deleteSelection(ast, selection);
 
       expect(result.newAST[0]).toEqual({
-        type: 'text',
-        value: '',
-        marks: undefined
+        type: 'element',
+        tag: 'span',
+        children: [{
+          type: 'text',
+          value: 'world',
+          marks: ['b']
+        }]
       });
       expect(result.newCursorPosition).toBe(0);
     });
@@ -277,6 +295,33 @@ describe('textOperations', () => {
         }]
       });
       expect(result.newCursorPosition).toBe(5); // 3 + 2 (XX 的长度)
+    });
+
+    it('应该删除实际数据中的加粗文本后清理空的格式化节点', () => {
+      const ast = createRealWorldAST();
+      const selection: Selection = {
+        start: 6, // "Wor" 的开始位置
+        end: 12,   // "Wor" 的结束位置
+        hasSelection: true
+      };
+
+      const result = deleteSelection(ast, selection);
+
+      // 应该清理空的格式化节点，只保留有内容的节点
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+
+      expect(pElement.children).toHaveLength(2); // 删除了空的 "Wor" 节点
+      expect(pElement.children[0]).toEqual({
+        type: 'text',
+        value: 'Hello ',
+        marks: undefined
+      });
+      expect(pElement.children[1]).toEqual({
+        type: 'text',
+        value: ' 这是一个可编辑的 AST 编辑器。',
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(6);
     });
   });
 });

@@ -1,5 +1,5 @@
 import type { ASTNode } from "../types/ast";
-import { cloneAST, getTextNodes, getTargetTextNode, mergeEmptyTextNodes } from "./core";
+import { cloneAST, getTextNodes, getTargetTextNode, cleanupEmptyNodes } from "./core";
 import type { Selection } from "./selection";
 import { isValidSelection, findNodeAndOffsetBySelectionOffset } from "./selection";
 
@@ -54,8 +54,8 @@ function handleCrossNodeSelection(ast: ASTNode[], selection: Selection, text: st
     startNode.value += text;
   }
 
-  // 5. 合并相邻的空文本节点
-  const finalAst = mergeEmptyTextNodes(newAst);
+  // 5. 清理空的节点
+  const finalAst = cleanupEmptyNodes(newAst);
 
   const newOffset = start + text.length;
   return {
@@ -159,7 +159,9 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
     };
   }
 
-  return { newAST: newAst, newCursorPosition };
+  // 清理空的节点
+  const finalAst = cleanupEmptyNodes(newAst);
+  return { newAST: finalAst, newCursorPosition };
 }
 
 // 在选区位置插入文本（如果有选区则先删除选中内容）
@@ -205,8 +207,12 @@ export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text
       // 跨节点的情况：删除选中内容并插入新文本（无样式）
       return handleCrossNodeSelection(ast, selection, text);
     }
+
+    // 只有在有选区时才需要清理空的节点（因为可能删除了内容）
+    const finalAst = cleanupEmptyNodes(newAst);
+    return { newAST: finalAst, newCursorPosition };
   } else {
-    // 没有选区时，正常插入
+    // 没有选区时，正常插入（不需要清理空的节点）
     const fallbackResult = insertTextAtPosition(ast, selection.start, text);
     const newOffset = selection.start + text.length;
     return {
@@ -214,6 +220,4 @@ export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text
       newCursorPosition: newOffset
     };
   }
-
-  return { newAST: newAst, newCursorPosition };
 }

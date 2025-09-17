@@ -70,27 +70,38 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
   return newAst.map(replaceInNode);
 }
 
-// 合并空的文本节点
+// 清理空的节点（包括空的文本节点和空的元素节点）
+export function cleanupEmptyNodes(ast: ASTNode[]): ASTNode[] {
+  function cleanupNode(node: ASTNode): ASTNode | null {
+    if (node.type === "text") {
+      // 保留非空文本节点
+      return node.value !== '' ? node : null;
+    } else if (node.type === "element") {
+      // 递归清理子节点
+      const cleanedChildren = node.children
+        .map(cleanupNode)
+        .filter((child): child is ASTNode => child !== null);
+
+      // 如果子节点为空，删除整个元素节点
+      if (cleanedChildren.length === 0) {
+        return null;
+      }
+
+      // 保留元素节点，即使只有一个子节点（保持格式化信息）
+      return {
+        ...node,
+        children: cleanedChildren
+      };
+    }
+    return node;
+  }
+
+  return ast
+    .map(cleanupNode)
+    .filter((node): node is ASTNode => node !== null);
+}
+
+// 合并空的文本节点（保持向后兼容）
 export function mergeEmptyTextNodes(ast: ASTNode[]): ASTNode[] {
-  const newAst = cloneAST(ast);
-  const textNodes = getTextNodes(newAst);
-
-  // 找到需要合并的节点
-  const nodesToMerge: number[] = [];
-  for (let i = 0; i < textNodes.length - 1; i++) {
-    if (textNodes[i].value === '' && textNodes[i + 1].value === '') {
-      nodesToMerge.push(i);
-    }
-  }
-
-  // 从后往前删除空节点，避免索引变化
-  for (let i = nodesToMerge.length - 1; i >= 0; i--) {
-    const nodeIndex = nodesToMerge[i];
-    const targetNode = getTargetTextNode(newAst, nodeIndex);
-    if (targetNode) {
-      targetNode.value = ''; // 标记为删除
-    }
-  }
-
-  return newAst;
+  return cleanupEmptyNodes(ast);
 }
