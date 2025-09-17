@@ -9,28 +9,11 @@ function App() {
       tag: "p",
       children: [
         { type: "text", value: "Hello " },
-        { type: "text", value: "World", marks: ["b"] },
+        { type: "text", value: "Wor", marks: ["b"] },
+        { type: "text", value: "ld", marks: ["i", "b"] },
         { type: "text", value: "! 这是一个可编辑的 AST 编辑器。" },
       ],
     },
-    // {
-    //   type: "element",
-    //   tag: "p",
-    //   children: [
-    //     { type: "text", value: "您可以：", marks: ["i"] },
-    //     { type: "text", value: " 直接编辑文本，使用快捷键格式化，或者点击按钮。" },
-    //     { type: "text", value: " 试试在", marks: ["u"] },
-    //     { type: "text", value: "不同位置", marks: ["b"] },
-    //     { type: "text", value: "编辑文本！" },
-    //   ],
-    // },
-    // {
-    //   type: "element",
-    //   tag: "p",
-    //   children: [
-    //     { type: "text", value: "第三段文本，包含更多节点用于测试。" },
-    //   ],
-    // },
   ];
 
   const handleASTChange = (newAST: ASTNode[]) => {

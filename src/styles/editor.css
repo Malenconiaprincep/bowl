@@ -13,7 +13,7 @@
   min-height: 200px;
   outline: none;
   line-height: 1.6;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   color: #333;
   word-wrap: break-word;
@@ -52,6 +52,27 @@
   color: inherit;
 }
 
+/* 使用 className 的标记样式 */
+.b {
+  font-weight: bold;
+  color: inherit;
+}
+
+.i {
+  font-style: italic;
+  color: inherit;
+}
+
+.u {
+  text-decoration: underline;
+  color: inherit;
+}
+
+.s {
+  text-decoration: line-through;
+  color: inherit;
+}
+
 /* 段落样式 */
 .editor-content p {
   margin: 0 0 8px 0;
@@ -82,4 +103,4 @@
 .editor-content ::-moz-selection {
   /* background-color: #007bff;
   color: white; */
-} 
+}

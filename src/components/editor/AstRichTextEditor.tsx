@@ -3,33 +3,23 @@ import type { ASTNode } from "../../types/ast";
 import { useCursorPosition } from "../../hooks/useCursorPosition";
 import { useTextInput } from "../../hooks/useTextInput";
 import { AstEditorToolbar } from "./AstEditorToolbar";
+import "../../styles/editor.css";
 
 // 渲染 AST 节点
 function renderNode(node: ASTNode, key: number): React.ReactNode {
   if (node.type === "text") {
-    let content: React.ReactNode = node.value;
-
-    // 应用标记
+    // 如果有标记，使用 span 标签和 className
     if (node.marks && node.marks.length > 0) {
-      node.marks.forEach(mark => {
-        switch (mark) {
-          case "b":
-            content = <b key={mark}>{content}</b>;
-            break;
-          case "i":
-            content = <i key={mark}>{content}</i>;
-            break;
-          case "u":
-            content = <u key={mark}>{content}</u>;
-            break;
-          case "s":
-            content = <s key={mark}>{content}</s>;
-            break;
-        }
-      });
+      const className = node.marks.join(' ');
+      return (
+        <span key={key} className={className}>
+          {node.value}
+        </span>
+      );
     }
 
-    return content;
+    // 没有标记，直接返回文本
+    return node.value;
   }
 
   if (node.type === "element") {
