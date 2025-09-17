@@ -153,8 +153,10 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
   } else {
     // 没有选区时，删除光标前一个字符
     const fallbackResult = deleteTextAtPosition(ast, selection.start, 1);
+    // 也需要清理空的节点
+    const finalAst = cleanupEmptyNodes(fallbackResult);
     return {
-      newAST: fallbackResult,
+      newAST: finalAst,
       newCursorPosition: Math.max(0, selection.start - 1)
     };
   }

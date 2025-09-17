@@ -87,10 +87,13 @@ export function cleanupEmptyNodes(ast: ASTNode[]): ASTNode[] {
         return null;
       }
 
+      // 合并相邻的相同格式的文本节点
+      const mergedChildren = mergeAdjacentTextNodes(cleanedChildren);
+
       // 保留元素节点，即使只有一个子节点（保持格式化信息）
       return {
         ...node,
-        children: cleanedChildren
+        children: mergedChildren
       };
     }
     return node;
@@ -99,6 +102,40 @@ export function cleanupEmptyNodes(ast: ASTNode[]): ASTNode[] {
   return ast
     .map(cleanupNode)
     .filter((node): node is ASTNode => node !== null);
+}
+
+// 合并相邻的相同格式的文本节点
+function mergeAdjacentTextNodes(nodes: ASTNode[]): ASTNode[] {
+  if (nodes.length === 0) return nodes;
+
+  const result: ASTNode[] = [];
+  let current: TextNode | null = null;
+
+  for (const node of nodes) {
+    if (node.type === "text") {
+      if (current &&
+        JSON.stringify(current.marks) === JSON.stringify(node.marks)) {
+        // 合并相同格式的文本节点
+        current.value += node.value;
+      } else {
+        // 开始新的文本节点
+        if (current) result.push(current);
+        current = { ...node };
+      }
+    } else {
+      // 非文本节点，先保存当前的文本节点
+      if (current) {
+        result.push(current);
+        current = null;
+      }
+      result.push(node);
+    }
+  }
+
+  // 保存最后一个文本节点
+  if (current) result.push(current);
+
+  return result;
 }
 
 // 合并空的文本节点（保持向后兼容）
