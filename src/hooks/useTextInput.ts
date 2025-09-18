@@ -47,13 +47,19 @@ export function useTextInput(
         isComposing: inputEvent.isComposing
       });
 
-      // 处理插入文本
-      if (inputEvent.inputType === 'insertText' || inputEvent.inputType === 'insertCompositionText') {
+      // 处理插入文本 - 只在非组合状态下处理 insertText
+      if (inputEvent.inputType === 'insertText' && !inputEvent.isComposing) {
         e.preventDefault();
         const text = inputEvent.data || '';
         if (text) {
           handleTextInput(text);
         }
+        return;
+      }
+
+      // 忽略组合输入过程中的事件，只在最终确认时处理
+      if (inputEvent.isComposing) {
+        // 不处理组合过程中的事件，让浏览器自然处理
         return;
       }
 
@@ -81,10 +87,25 @@ export function useTextInput(
       }
     };
 
+    // 处理组合输入结束事件
+    const handleCompositionEnd = (e: CompositionEvent) => {
+      console.log('组合输入结束:', {
+        data: e.data,
+        type: e.type
+      });
+
+      // 当组合输入结束时，将最终文本添加到我们的 AST 中
+      if (e.data) {
+        handleTextInput(e.data);
+      }
+    };
+
     editor.addEventListener('beforeinput', handleBeforeInput);
+    editor.addEventListener('compositionend', handleCompositionEnd);
 
     return () => {
       editor.removeEventListener('beforeinput', handleBeforeInput);
+      editor.removeEventListener('compositionend', handleCompositionEnd);
     };
   }, [editorRef, handleTextInput, handleDelete]);
 
