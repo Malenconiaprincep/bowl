@@ -111,21 +111,34 @@ export function useTextInput(
 
   // 处理键盘事件（保留用于快捷键）
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // 处理快捷键
-    if (e.ctrlKey || e.metaKey) {
+    // 禁用 Enter 键换行
+    if (e.key === 'Enter') {
       e.preventDefault();
+      return;
+    }
+
+    // 只处理我们自定义的格式化快捷键，让系统默认快捷键正常工作
+    if (e.ctrlKey || e.metaKey) {
       switch (e.key) {
         case 'b':
           // 这里可以触发格式化命令
+          e.preventDefault();
           break;
         case 'i':
           // 这里可以触发格式化命令
+          e.preventDefault();
           break;
         case 'u':
           // 这里可以触发格式化命令
+          e.preventDefault();
           break;
         case 's':
           // 这里可以触发格式化命令
+          e.preventDefault();
+          break;
+        // 不处理 c, v, a, x, z 等系统默认快捷键，让浏览器自然处理
+        default:
+          // 让其他快捷键正常工作
           break;
       }
     }
