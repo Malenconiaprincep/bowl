@@ -39,35 +39,76 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
 
   if (nodeIndex >= textNodes.length) return newAst;
 
-  // 找到要替换的文本节点在 AST 中的位置
-  let currentIndex = 0;
-
-  function replaceInNode(node: ASTNode): ASTNode {
-    if (node.type === "text") {
-      if (currentIndex === nodeIndex) {
-        // 如果只有一个新节点，直接替换
-        if (newNodes.length === 1) {
+  // 如果只有一个新节点，直接替换
+  if (newNodes.length === 1) {
+    let currentIndex = 0;
+    function replaceInNode(node: ASTNode): ASTNode {
+      if (node.type === "text") {
+        if (currentIndex === nodeIndex) {
           return newNodes[0];
         }
-        // 如果有多个新节点，需要包装在 span 中
+        currentIndex++;
+        return node;
+      } else if (node.type === "element") {
         return {
-          type: "element",
-          tag: "span",
-          children: newNodes
+          ...node,
+          children: node.children.map(replaceInNode)
         };
       }
-      currentIndex++;
       return node;
-    } else if (node.type === "element") {
-      return {
-        ...node,
-        children: node.children.map(replaceInNode)
-      };
     }
-    return node;
+    return newAst.map(replaceInNode);
   }
 
-  return newAst.map(replaceInNode);
+  // 如果有多个新节点，需要找到父级并替换整个父级
+  let currentIndex = 0;
+  let found = false;
+  let parentNode: ASTNode | null = null;
+  let parentChildren: ASTNode[] = [];
+  let targetIndex = -1;
+
+  function findParent(node: ASTNode, parent: ASTNode | null, children: ASTNode[], index: number): void {
+    if (node.type === "text") {
+      if (currentIndex === nodeIndex) {
+        found = true;
+        parentNode = parent;
+        parentChildren = children;
+        targetIndex = index;
+        return;
+      }
+      currentIndex++;
+    } else if (node.type === "element") {
+      node.children.forEach((child, childIndex) => {
+        if (!found) {
+          findParent(child, node, node.children, childIndex);
+        }
+      });
+    }
+  }
+
+  // 找到要替换的文本节点的父级
+  newAst.forEach((node, index) => {
+    if (!found) {
+      findParent(node, null, newAst, index);
+    }
+  });
+
+  if (!found || !parentNode) return newAst;
+
+  // 替换父级节点的子节点
+  if (parentNode === null) {
+    // 根级别的替换
+    const before = newAst.slice(0, targetIndex);
+    const after = newAst.slice(targetIndex + 1);
+    return [...before, ...newNodes, ...after];
+  } else {
+    // 元素节点内的替换
+    const elementNode = parentNode as any;
+    const before = elementNode.children.slice(0, targetIndex);
+    const after = elementNode.children.slice(targetIndex + 1);
+    elementNode.children = [...before, ...newNodes, ...after];
+    return newAst;
+  }
 }
 
 // 清理空的节点（包括空的文本节点和空的元素节点）

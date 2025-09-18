@@ -239,7 +239,7 @@ describe('core', () => {
   });
 
   describe('mergeEmptyTextNodes', () => {
-    it('应该合并相邻的空文本节点', () => {
+    it('应该删除空文本节点', () => {
       const ast: ASTNode[] = [
         createTextNode('Hello'),
         createTextNode(''), // 空节点
@@ -249,24 +249,14 @@ describe('core', () => {
 
       const result = mergeEmptyTextNodes(ast);
 
-      // 当前实现只是将空节点标记为空字符串，不删除
-      expect(result).toHaveLength(4);
+      // 空节点应该被删除
+      expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
         type: 'text',
         value: 'Hello',
         marks: undefined
       });
       expect(result[1]).toEqual({
-        type: 'text',
-        value: '',
-        marks: undefined
-      });
-      expect(result[2]).toEqual({
-        type: 'text',
-        value: '',
-        marks: undefined
-      });
-      expect(result[3]).toEqual({
         type: 'text',
         value: 'World',
         marks: undefined
@@ -289,23 +279,8 @@ describe('core', () => {
 
       const result = mergeEmptyTextNodes(ast);
 
-      // 当前实现只是将空节点标记为空字符串，不删除
-      expect(result).toHaveLength(3);
-      expect(result[0]).toEqual({
-        type: 'text',
-        value: '',
-        marks: undefined
-      });
-      expect(result[1]).toEqual({
-        type: 'text',
-        value: '',
-        marks: undefined
-      });
-      expect(result[2]).toEqual({
-        type: 'text',
-        value: '',
-        marks: undefined
-      });
+      // 所有空节点都应该被删除
+      expect(result).toHaveLength(0);
     });
 
     it('应该处理空和非空节点混合的情况', () => {
@@ -320,14 +295,11 @@ describe('core', () => {
 
       const result = mergeEmptyTextNodes(ast);
 
-      // 当前实现只是将空节点标记为空字符串，不删除
-      expect(result).toHaveLength(6);
+      // 空节点应该被删除，只保留非空节点
+      expect(result).toHaveLength(3);
       expect((result[0] as TextNode).value).toBe('Hello');
-      expect((result[1] as TextNode).value).toBe('');
-      expect((result[2] as TextNode).value).toBe('World');
-      expect((result[3] as TextNode).value).toBe('');
-      expect((result[4] as TextNode).value).toBe('');
-      expect((result[5] as TextNode).value).toBe('!');
+      expect((result[1] as TextNode).value).toBe('World');
+      expect((result[2] as TextNode).value).toBe('!');
     });
   });
 });

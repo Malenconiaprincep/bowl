@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import type { EditorCommand } from "../../types/editor";
 import type { Mark, Selection } from "../../utils";
 import { EditorToolbar } from "../toolbar/EditorToolbar";
-import { applyFormatToSelection, getTextNodes } from "../../utils";
+import { applyFormatToSelection, getTextNodes, findNodeAndOffsetBySelectionOffset } from "../../utils";
 import type { ASTNode } from "../../types/ast";
 
 interface AstEditorToolbarProps {
@@ -30,12 +30,16 @@ export const AstEditorToolbar: React.FC<AstEditorToolbarProps> = ({
       // 对当前光标位置应用格式化（简化版）
       const newAST = JSON.parse(JSON.stringify(ast));
       const textNodes = getTextNodes(newAST);
-      const targetNode = textNodes[cursorPosition.nodeIndex];
+      const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, cursorPosition);
+      const targetNode = textNodes[nodeIndex];
 
       if (targetNode) {
         if (!targetNode.marks) targetNode.marks = [];
         if (!targetNode.marks.includes(mark)) {
           targetNode.marks.push(mark);
+        } else {
+          // 如果已有该格式，则移除（切换格式）
+          targetNode.marks = targetNode.marks.filter(m => m !== mark);
         }
         onUpdateAST(newAST);
       }
