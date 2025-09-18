@@ -9,7 +9,8 @@ export function useTextInput(
   onUpdateAST: (newAST: ASTNode[]) => void,
   pendingCursorPosition: React.MutableRefObject<number | null>,
   selection: Selection,
-  editorRef: React.RefObject<HTMLDivElement | null>
+  editorRef: React.RefObject<HTMLDivElement | null>,
+  isComposing: React.MutableRefObject<boolean>
 ) {
   // 处理文本输入
   const handleTextInput = useCallback((text: string) => {
@@ -47,19 +48,19 @@ export function useTextInput(
         isComposing: inputEvent.isComposing
       });
 
+      // 如果正在组合输入，跳过所有处理
+      if (isComposing.current || inputEvent.isComposing) {
+        console.log('跳过组合输入过程中的事件');
+        return;
+      }
+
       // 处理插入文本 - 只在非组合状态下处理 insertText
-      if (inputEvent.inputType === 'insertText' && !inputEvent.isComposing) {
+      if (inputEvent.inputType === 'insertText') {
         e.preventDefault();
         const text = inputEvent.data || '';
         if (text) {
           handleTextInput(text);
         }
-        return;
-      }
-
-      // 忽略组合输入过程中的事件，只在最终确认时处理
-      if (inputEvent.isComposing) {
-        // 不处理组合过程中的事件，让浏览器自然处理
         return;
       }
 
@@ -94,20 +95,34 @@ export function useTextInput(
         type: e.type
       });
 
+      // 标记组合输入结束
+      isComposing.current = false;
+
       // 当组合输入结束时，将最终文本添加到我们的 AST 中
       if (e.data) {
         handleTextInput(e.data);
       }
     };
 
+    // 处理组合输入开始事件
+    const handleCompositionStart = (e: CompositionEvent) => {
+      console.log('组合输入开始:', {
+        data: e.data,
+        type: e.type
+      });
+      isComposing.current = true;
+    };
+
     editor.addEventListener('beforeinput', handleBeforeInput);
+    editor.addEventListener('compositionstart', handleCompositionStart);
     editor.addEventListener('compositionend', handleCompositionEnd);
 
     return () => {
       editor.removeEventListener('beforeinput', handleBeforeInput);
+      editor.removeEventListener('compositionstart', handleCompositionStart);
       editor.removeEventListener('compositionend', handleCompositionEnd);
     };
-  }, [editorRef, handleTextInput, handleDelete]);
+  }, [editorRef, handleTextInput, handleDelete, isComposing]);
 
   // 处理键盘事件（保留用于快捷键）
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

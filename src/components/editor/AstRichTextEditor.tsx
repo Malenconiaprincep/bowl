@@ -57,7 +57,10 @@ export default function ASTEditor({
     restoreSelection,
     checkActiveCommands,
     handleSelectionChange,
-    handleClick
+    handleClick,
+    handleCompositionStart,
+    handleCompositionEnd,
+    isComposing
   } = useCursorPosition(ast);
 
   // 更新 AST 并触发回调
@@ -90,7 +93,8 @@ export default function ASTEditor({
     updateAST,
     pendingCursorPosition,
     selection,
-    editorRef
+    editorRef,
+    isComposing
   );
 
   return (
@@ -102,6 +106,8 @@ export default function ASTEditor({
         onKeyDown={handleKeyDown}
         onSelect={handleSelectionChange}
         onClick={handleClick}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         style={{
           border: "1px solid #ccc",
           padding: 10,

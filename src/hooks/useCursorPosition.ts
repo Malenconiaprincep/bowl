@@ -15,6 +15,7 @@ export function useCursorPosition(ast: ASTNode[]) {
   const isUpdatingFromState = useRef(false);
   const pendingCursorPosition = useRef<number | null>(null);
   const pendingSelection = useRef<Selection | null>(null);
+  const isComposing = useRef(false);
 
   // 恢复光标位置
   const restoreCursorPosition = useCallback((position: number) => {
@@ -117,7 +118,7 @@ export function useCursorPosition(ast: ASTNode[]) {
 
   // 处理选区变化
   const handleSelectionChange = useCallback(() => {
-    if (!editorRef.current || isUpdatingFromState.current) return;
+    if (!editorRef.current || isUpdatingFromState.current || isComposing.current) return;
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
@@ -183,6 +184,22 @@ export function useCursorPosition(ast: ASTNode[]) {
     handleSelectionChange();
   }, [handleSelectionChange]);
 
+  // 处理组合输入开始
+  const handleCompositionStart = useCallback(() => {
+    console.log('组合输入开始');
+    isComposing.current = true;
+  }, []);
+
+  // 处理组合输入结束
+  const handleCompositionEnd = useCallback(() => {
+    console.log('组合输入结束');
+    isComposing.current = false;
+    // 组合输入结束后，重新计算光标位置
+    setTimeout(() => {
+      handleSelectionChange();
+    }, 0);
+  }, [handleSelectionChange]);
+
   return {
     cursorPosition,
     setCursorPosition,
@@ -198,6 +215,9 @@ export function useCursorPosition(ast: ASTNode[]) {
     restoreSelection,
     checkActiveCommands,
     handleSelectionChange,
-    handleClick
+    handleClick,
+    handleCompositionStart,
+    handleCompositionEnd,
+    isComposing
   };
 }

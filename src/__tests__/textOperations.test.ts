@@ -361,4 +361,200 @@ describe('textOperations', () => {
       });
     });
   });
+
+  describe('中文输入处理', () => {
+    it('应该正确处理中文字符插入', () => {
+      const ast = createTestAST();
+      const selection: Selection = {
+        start: 3,
+        end: 3,
+        hasSelection: false
+      };
+
+      const result = insertTextAtSelection(ast, selection, '你好');
+
+      expect(result.newAST[0]).toEqual({
+        type: 'text',
+        value: 'Hel你好lo ',
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(5); // 3 + 2 (你好 的长度)
+    });
+
+    it('应该正确处理中文字符替换选区', () => {
+      const ast = createTestAST();
+      const selection: Selection = {
+        start: 1, // "e" 的位置
+        end: 4,   // "o" 的位置
+        hasSelection: true
+      };
+
+      const result = insertTextAtSelection(ast, selection, '世界');
+
+      expect(result.newAST[0]).toEqual({
+        type: 'text',
+        value: 'H世界o ', // 替换了 "ell" 为 "世界"
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(3); // 1 + 2 (世界 的长度)
+    });
+
+    it('应该正确处理中文标点符号', () => {
+      const ast = createTestAST();
+      const selection: Selection = {
+        start: 11, // "!" 的位置 (Hello + world + ! = 6 + 5 + 1 = 12, 所以!在位置11)
+        end: 11,
+        hasSelection: false
+      };
+
+      const result = insertTextAtSelection(ast, selection, '，。！？');
+
+      expect(result.newAST[2]).toEqual({
+        type: 'text',
+        value: '，。！？!',
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(15); // 11 + 4 (，。！？ 的长度)
+    });
+
+    it('应该正确处理中英文混合输入', () => {
+      const ast = createTestAST();
+      const selection: Selection = {
+        start: 3,
+        end: 3,
+        hasSelection: false
+      };
+
+      const result = insertTextAtSelection(ast, selection, 'Hello世界');
+
+      expect(result.newAST[0]).toEqual({
+        type: 'text',
+        value: 'HelHello世界lo ',
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(10); // 3 + 7 (Hello世界 的长度)
+    });
+
+    it('应该正确处理中文删除操作', () => {
+      const ast = [
+        createTextNode('你好世界'),
+        createElementNode('span', [
+          createTextNode('测试', ['b'])
+        ]),
+        createTextNode('！')
+      ];
+
+      const selection: Selection = {
+        start: 2, // "世" 的位置
+        end: 2,
+        hasSelection: false
+      };
+
+      const result = deleteSelection(ast, selection);
+
+      expect(result.newAST[0]).toEqual({
+        type: 'text',
+        value: '你世界',
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(1);
+    });
+
+    it('应该正确处理中文选区删除', () => {
+      const ast = [
+        createTextNode('你好世界'),
+        createElementNode('span', [
+          createTextNode('测试', ['b'])
+        ]),
+        createTextNode('！')
+      ];
+
+      const selection: Selection = {
+        start: 1, // "好" 的位置
+        end: 3,   // "世" 的位置
+        hasSelection: true
+      };
+
+      const result = deleteSelection(ast, selection);
+
+      expect(result.newAST[0]).toEqual({
+        type: 'text',
+        value: '你界',
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(1);
+    });
+
+    it('应该正确处理包含中文的跨节点操作', () => {
+      const ast = [
+        createTextNode('你好'),
+        createElementNode('span', [
+          createTextNode('世界', ['b'])
+        ]),
+        createTextNode('！')
+      ];
+
+      const selection: Selection = {
+        start: 1, // "好" 的位置
+        end: 3,   // "世" 的位置
+        hasSelection: true
+      };
+
+      const result = insertTextAtSelection(ast, selection, '测试');
+
+      expect(result.newAST[0]).toEqual({
+        type: 'text',
+        value: '你测试',
+        marks: undefined
+      });
+      expect(result.newAST[1]).toEqual({
+        type: 'element',
+        tag: 'span',
+        children: [{
+          type: 'text',
+          value: '界',
+          marks: ['b']
+        }]
+      });
+      expect(result.newCursorPosition).toBe(3); // 1 + 2 (测试 的长度)
+    });
+
+    it('应该正确处理长中文文本插入', () => {
+      const ast = createTestAST();
+      const selection: Selection = {
+        start: 0,
+        end: 0,
+        hasSelection: false
+      };
+
+      const longChineseText = '这是一个很长的中文文本，用来测试编辑器的中文处理能力。';
+      const result = insertTextAtSelection(ast, selection, longChineseText);
+
+      expect(result.newAST[0]).toEqual({
+        type: 'text',
+        value: longChineseText + 'Hello ',
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(longChineseText.length);
+    });
+
+    it('应该正确处理中文数字和符号', () => {
+      const ast = createTestAST();
+      const selection: Selection = {
+        start: 3,
+        end: 3,
+        hasSelection: false
+      };
+
+      const chineseNumbers = '一二三四五①②③④⑤';
+      const result = insertTextAtSelection(ast, selection, chineseNumbers);
+
+      expect(result.newAST[0]).toEqual({
+        type: 'text',
+        value: 'Hel' + chineseNumbers + 'lo ',
+        marks: undefined
+      });
+      expect(result.newCursorPosition).toBe(3 + chineseNumbers.length);
+    });
+  });
 });
