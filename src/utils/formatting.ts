@@ -1,7 +1,7 @@
 import type { ASTNode, TextNode, Mark } from "../types/ast";
 import { cloneAST, getTextNodes, getTargetTextNode, replaceTextNodeInAST } from "./core";
 import type { Selection } from "./selection";
-import { isValidSelection } from "./selection";
+import { isValidSelection, findNodeAndOffsetBySelectionOffset } from "./selection";
 
 // 文本切片操作
 function sliceText(text: string, startOffset: number, endOffset?: number): {
@@ -30,12 +30,16 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
 
   const { start, end } = selection;
 
+  // 根据全局偏移量找到对应的文本节点索引和偏移量
+  const startNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, start);
+  const endNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, end);
+
   // 处理单个文本节点的情况
-  if (start.nodeIndex === end.nodeIndex) {
-    const targetNode = getTargetTextNode(newAst, start.nodeIndex);
+  if (startNodeInfo.nodeIndex === endNodeInfo.nodeIndex) {
+    const targetNode = getTargetTextNode(newAst, startNodeInfo.nodeIndex);
     if (!targetNode) return newAst;
 
-    const { before, selected, after } = sliceText(targetNode.value, start.textOffset, end.textOffset);
+    const { before, selected, after } = sliceText(targetNode.value, startNodeInfo.textOffset, endNodeInfo.textOffset);
 
     // 创建新的文本节点
     const newNodes: TextNode[] = [];
@@ -70,7 +74,7 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
     }
 
     // 替换原节点
-    return replaceTextNodeInAST(newAst, start.nodeIndex, newNodes);
+    return replaceTextNodeInAST(newAst, startNodeInfo.nodeIndex, newNodes);
   } else {
     // 处理跨节点的情况（简化版）
     // 这里可以实现更复杂的跨节点格式化逻辑
