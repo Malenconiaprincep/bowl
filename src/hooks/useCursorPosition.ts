@@ -14,6 +14,7 @@ export function useCursorPosition(ast: ASTNode[]) {
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromState = useRef(false);
   const pendingCursorPosition = useRef<number | null>(null);
+  const pendingSelection = useRef<Selection | null>(null);
 
   // 恢复光标位置
   const restoreCursorPosition = useCallback((position: number) => {
@@ -52,6 +53,52 @@ export function useCursorPosition(ast: ASTNode[]) {
         sel?.removeAllRanges();
         sel?.addRange(range);
       }
+    }
+  }, [ast]);
+
+  // 恢复选区
+  const restoreSelection = useCallback((selection: Selection) => {
+    if (!editorRef.current || !selection.hasSelection) return;
+
+    const textNodes = getTextNodes(ast);
+    const startNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
+    const endNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, selection.end);
+
+    if (!startNodeInfo || !endNodeInfo) return;
+
+    // 找到起始和结束的 DOM 文本节点
+    const walker = document.createTreeWalker(
+      editorRef.current,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    let currentIndex = 0;
+    let startTextNode = null;
+    let endTextNode = null;
+
+    while (walker.nextNode()) {
+      if (currentIndex === startNodeInfo.nodeIndex) {
+        startTextNode = walker.currentNode;
+      }
+      if (currentIndex === endNodeInfo.nodeIndex) {
+        endTextNode = walker.currentNode;
+        break;
+      }
+      currentIndex++;
+    }
+
+    if (startTextNode && endTextNode) {
+      const range = document.createRange();
+      const startOffset = Math.min(startNodeInfo.textOffset, startTextNode.textContent?.length || 0);
+      const endOffset = Math.min(endNodeInfo.textOffset, endTextNode.textContent?.length || 0);
+
+      range.setStart(startTextNode, startOffset);
+      range.setEnd(endTextNode, endOffset);
+
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
     }
   }, [ast]);
 
@@ -146,7 +193,9 @@ export function useCursorPosition(ast: ASTNode[]) {
     editorRef,
     isUpdatingFromState,
     pendingCursorPosition,
+    pendingSelection,
     restoreCursorPosition,
+    restoreSelection,
     checkActiveCommands,
     handleSelectionChange,
     handleClick

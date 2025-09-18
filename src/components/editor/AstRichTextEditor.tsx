@@ -52,7 +52,9 @@ export default function ASTEditor({
     editorRef,
     isUpdatingFromState,
     pendingCursorPosition,
+    pendingSelection,
     restoreCursorPosition,
+    restoreSelection,
     checkActiveCommands,
     handleSelectionChange,
     handleClick
@@ -65,16 +67,21 @@ export default function ASTEditor({
     onChange?.(newAST);
   }, [onChange, isUpdatingFromState]);
 
-  // 使用 useLayoutEffect 在 DOM 更新后立即恢复光标位置
+  // 使用 useLayoutEffect 在 DOM 更新后立即恢复光标位置或选区
   useLayoutEffect(() => {
-    if (pendingCursorPosition.current) {
+    if (pendingSelection.current) {
+      // 如果有待恢复的选区，恢复选区
+      restoreSelection(pendingSelection.current);
+      pendingSelection.current = null;
+    } else if (pendingCursorPosition.current) {
+      // 否则恢复光标位置
       restoreCursorPosition(pendingCursorPosition.current);
       pendingCursorPosition.current = null;
     }
     isUpdatingFromState.current = false;
     // 检查激活状态
     checkActiveCommands();
-  }, [ast, restoreCursorPosition, checkActiveCommands, pendingCursorPosition, isUpdatingFromState]);
+  }, [ast, restoreCursorPosition, restoreSelection, checkActiveCommands, pendingCursorPosition, pendingSelection, isUpdatingFromState]);
 
   // 使用文本输入处理 hook
   const { handleKeyDown } = useTextInput(
@@ -113,6 +120,8 @@ export default function ASTEditor({
         cursorPosition={cursorPosition}
         activeCommands={activeCommands}
         onUpdateAST={updateAST}
+        pendingCursorPosition={pendingCursorPosition}
+        pendingSelection={pendingSelection}
       />
 
       <div style={{ marginTop: 10, fontSize: '12px', color: '#666' }}>

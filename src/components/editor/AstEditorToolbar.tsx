@@ -11,6 +11,8 @@ interface AstEditorToolbarProps {
   cursorPosition: number;
   activeCommands: string[];
   onUpdateAST: (newAST: ASTNode[]) => void;
+  pendingCursorPosition: React.MutableRefObject<number | null>;
+  pendingSelection: React.MutableRefObject<Selection | null>;
 }
 
 export const AstEditorToolbar: React.FC<AstEditorToolbarProps> = ({
@@ -18,16 +20,22 @@ export const AstEditorToolbar: React.FC<AstEditorToolbarProps> = ({
   selection,
   cursorPosition,
   activeCommands,
-  onUpdateAST
+  onUpdateAST,
+  pendingCursorPosition,
+  pendingSelection
 }) => {
   // 执行格式化命令
   const executeCommand = useCallback((mark: Mark) => {
     if (selection.hasSelection) {
       // 对选区应用格式化
+      // 保存当前选区，以便在 AST 更新后恢复
+      pendingSelection.current = { ...selection };
       const newAST = applyFormatToSelection(ast, selection, mark);
       onUpdateAST(newAST);
     } else {
       // 对当前光标位置应用格式化（简化版）
+      // 保存当前光标位置，以便在 AST 更新后恢复
+      pendingCursorPosition.current = cursorPosition;
       const newAST = JSON.parse(JSON.stringify(ast));
       const textNodes = getTextNodes(newAST);
       const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, cursorPosition);
@@ -44,7 +52,7 @@ export const AstEditorToolbar: React.FC<AstEditorToolbarProps> = ({
         onUpdateAST(newAST);
       }
     }
-  }, [ast, selection, cursorPosition, onUpdateAST]);
+  }, [ast, selection, cursorPosition, onUpdateAST, pendingCursorPosition, pendingSelection]);
 
   // 处理工具栏命令
   const handleToolbarCommand = useCallback((command: EditorCommand) => {
