@@ -87,29 +87,37 @@ function applyFormatToCrossNodeSelection(
     });
   }
 
-  console.log('构建的新节点数组:', newNodes.map(node => ({
-    value: node.value,
-    marks: node.marks
-  })));
+  // 直接构建新的 AST，保持 p 标签结构
+  const result: ASTNode[] = [];
 
-  // 使用 replaceTextNodeInAST 来正确替换节点
-  let resultAst = replaceTextNodeInAST(newAst, startNodeInfo.nodeIndex, newNodes);
+  for (let i = 0; i < newAst.length; i++) {
+    if (i === 0) { // 假设第一个节点是 p 标签
+      const pNode = newAst[i] as any;
+      const newChildren: ASTNode[] = [];
 
-  console.log('替换起始节点后的结果:', resultAst[0]);
+      // 添加起始节点之前的所有子节点
+      for (let j = 0; j < startNodeInfo.nodeIndex; j++) {
+        newChildren.push(pNode.children[j]);
+      }
 
-  // 删除中间节点和结束节点
-  // 注意：在替换起始节点后，索引会发生变化
-  const remainingNodesToDelete = endNodeInfo.nodeIndex - startNodeInfo.nodeIndex;
-  for (let i = 0; i < remainingNodesToDelete; i++) {
-    // 需要删除的节点索引：起始节点被替换为多个节点后，需要删除的节点索引会发生变化
-    // 起始节点被替换为 3 个节点，所以需要删除的节点索引是 3 + i
-    const nodeIndexToDelete = 3 + i; // 3 是因为起始节点被替换为 3 个节点
-    resultAst = replaceTextNodeInAST(resultAst, nodeIndexToDelete, []);
+      // 添加新的节点数组
+      newChildren.push(...newNodes);
+
+      // 添加结束节点之后的所有子节点
+      for (let j = endNodeInfo.nodeIndex + 1; j < pNode.children.length; j++) {
+        newChildren.push(pNode.children[j]);
+      }
+
+      result.push({
+        ...pNode,
+        children: newChildren
+      });
+    } else {
+      result.push(newAst[i]);
+    }
   }
 
-  console.log('最终结果:', resultAst[0]);
-
-  return resultAst;
+  return result;
 }
 
 // 应用格式化到选区
@@ -118,6 +126,11 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
 
   const newAst = cloneAST(ast);
   const textNodes = getTextNodes(newAst);
+
+  console.log('文本节点列表:', textNodes.map(node => ({
+    value: node.value,
+    marks: node.marks
+  })));
 
   // 验证选区有效性
   if (!isValidSelection(selection, textNodes)) {
@@ -130,19 +143,36 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
   const startNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, start);
   const endNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, end);
 
+  console.log('选区范围:', { start, end, startNodeInfo, endNodeInfo });
+
   // 处理单个文本节点的情况
   if (startNodeInfo.nodeIndex === endNodeInfo.nodeIndex) {
     const targetNode = getTargetTextNode(newAst, startNodeInfo.nodeIndex);
     if (!targetNode) return newAst;
 
+    console.log('单个文本节点选区:', {
+      startNodeInfo,
+      endNodeInfo,
+      targetNode: targetNode.value,
+      originalMarks: targetNode.marks
+    });
+
     const { before, selected, after } = sliceText(targetNode.value, startNodeInfo.textOffset, endNodeInfo.textOffset);
+
+    console.log('文本切片结果:', { before, selected, after });
 
     // 如果选区覆盖整个文本节点，直接修改原节点的 marks
     if (!before && !after && selected) {
+      console.log('选区覆盖整个文本节点:', {
+        targetNode: targetNode.value,
+        originalMarks: targetNode.marks,
+        newMark: mark
+      });
       if (!targetNode.marks) targetNode.marks = [];
       if (!targetNode.marks.includes(mark)) {
         targetNode.marks.push(mark);
       }
+      console.log('修改后的 marks:', targetNode.marks);
       return newAst;
     }
 

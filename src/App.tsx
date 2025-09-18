@@ -16,30 +16,30 @@ function App() {
   //   },
   // ];
 
-  const initialAST: ASTNode[] = [
-    {
-      type: "element",
-      tag: "p",
-      children: [
-        { type: "text", value: "First " },
-        { type: "text", value: "Second " },
-        { type: "text", value: "Third " },
-        { type: "text", value: "Fourth " },
-      ],
-    },
-  ];
-
   // const initialAST: ASTNode[] = [
   //   {
   //     type: "element",
   //     tag: "p",
   //     children: [
-  //       { type: "text", value: "Hello " },
-  //       { type: "text", value: "world", marks: ["b"] },
-  //       { type: "text", value: "! " },
+  //       { type: "text", value: "First " },
+  //       { type: "text", value: "Second " },
+  //       { type: "text", value: "Third " },
+  //       { type: "text", value: "Fourth " },
   //     ],
-  //   }
-  // ]
+  //   },
+  // ];
+
+  const initialAST: ASTNode[] = [
+    {
+      type: "element",
+      tag: "p",
+      children: [
+        { type: "text", value: "Hello " },
+        { type: "text", value: "world", marks: ["b"] },
+        { type: "text", value: "! " },
+      ],
+    }
+  ]
 
   const handleASTChange = (newAST: ASTNode[]) => {
     console.log("AST 已更新:", newAST);

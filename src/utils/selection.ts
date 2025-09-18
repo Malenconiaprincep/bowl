@@ -72,7 +72,7 @@ export function findNodeAndOffsetBySelectionOffset(textNodes: TextNode[], select
   for (let i = 0; i < textNodes.length; i++) {
     const nodeLength = textNodes[i].value.length;
 
-    if (selectionOffset <= currentOffset + nodeLength) {
+    if (selectionOffset < currentOffset + nodeLength) {
       return {
         nodeIndex: i,
         textOffset: selectionOffset - currentOffset
