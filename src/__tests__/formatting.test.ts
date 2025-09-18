@@ -242,6 +242,7 @@ describe('formatting', () => {
       // // 分割后的节点
       expect((children[1] as TextNode).value).toBe('ello ');
       expect((children[1] as TextNode).marks).toEqual([]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((children[2] as any).type).toBe('element');
     });
   });

@@ -92,7 +92,7 @@ function applyFormatToCrossNodeSelection(
 
   for (let i = 0; i < newAst.length; i++) {
     if (i === 0) { // 假设第一个节点是 p 标签
-      const pNode = newAst[i] as any;
+      const pNode = newAst[i] as { children: ASTNode[] };
       const newChildren: ASTNode[] = [];
 
       // 添加起始节点之前的所有子节点

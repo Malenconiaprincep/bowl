@@ -64,7 +64,7 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
   let currentIndex = 0;
   let found = false;
   let parentNode: ASTNode | null = null;
-  let parentChildren: ASTNode[] = [];
+  // let parentChildren: ASTNode[] = [];
   let targetIndex = -1;
 
   function findParent(node: ASTNode, parent: ASTNode | null, children: ASTNode[], index: number): void {
@@ -72,7 +72,7 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
       if (currentIndex === nodeIndex) {
         found = true;
         parentNode = parent;
-        parentChildren = children;
+        // parentChildren = children;
         targetIndex = index;
         return;
       }
@@ -112,7 +112,7 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
     }
   } else {
     // 元素节点内的替换
-    const elementNode = parentNode as any;
+    const elementNode = parentNode as { children: ASTNode[] };
     const before = elementNode.children.slice(0, targetIndex);
     const after = elementNode.children.slice(targetIndex + 1);
     if (wrapInSpan) {

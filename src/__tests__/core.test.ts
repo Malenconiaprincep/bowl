@@ -122,11 +122,13 @@ describe('core', () => {
       expect(cloned).toEqual(ast);
 
       // 修改深层嵌套的节点
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const divElement = cloned[0] as any;
       const spanElement = divElement.children[1];
       const deepTextNode = spanElement.children[0];
       deepTextNode.value = 'modified';
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const originalDivElement = ast[0] as any;
       const originalSpanElement = originalDivElement.children[1];
       const originalDeepTextNode = originalSpanElement.children[0];
@@ -231,6 +233,7 @@ describe('core', () => {
 
       const result = replaceTextNodeInAST(ast, 1, newNodes);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const spanElement = result[1] as any;
       expect(spanElement.children[0]).toEqual({
         type: 'text',
