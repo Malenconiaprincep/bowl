@@ -33,7 +33,7 @@ export function getTargetTextNode(ast: ASTNode[], nodeIndex: number): TextNode |
 }
 
 // 在 AST 中替换文本节点
-export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes: TextNode[]): ASTNode[] {
+export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes: TextNode[], wrapInSpan: boolean = false): ASTNode[] {
   const newAst = cloneAST(ast);
   const textNodes = getTextNodes(newAst);
 
@@ -93,20 +93,38 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
     }
   });
 
-  if (!found || !parentNode) return newAst;
+  if (!found) return newAst;
 
   // 替换父级节点的子节点
   if (parentNode === null) {
     // 根级别的替换
     const before = newAst.slice(0, targetIndex);
     const after = newAst.slice(targetIndex + 1);
-    return [...before, ...newNodes, ...after];
+    if (wrapInSpan) {
+      const spanElement = {
+        type: "element" as const,
+        tag: "span" as const,
+        children: newNodes
+      };
+      return [...before, spanElement, ...after];
+    } else {
+      return [...before, ...newNodes, ...after];
+    }
   } else {
     // 元素节点内的替换
     const elementNode = parentNode as any;
     const before = elementNode.children.slice(0, targetIndex);
     const after = elementNode.children.slice(targetIndex + 1);
-    elementNode.children = [...before, ...newNodes, ...after];
+    if (wrapInSpan) {
+      const spanElement = {
+        type: "element" as const,
+        tag: "span" as const,
+        children: newNodes
+      };
+      elementNode.children = [...before, spanElement, ...after];
+    } else {
+      elementNode.children = [...before, ...newNodes, ...after];
+    }
     return newAst;
   }
 }

@@ -3,18 +3,18 @@ import type { ASTNode } from "./types/ast";
 import ASTEditor from "./components/editor/AstRichTextEditor";
 
 function App() {
-  // const initialAST: ASTNode[] = [
-  //   {
-  //     type: "element",
-  //     tag: "p",
-  //     children: [
-  //       { type: "text", value: "Hello " },
-  //       { type: "text", value: "Wor", marks: ["b"] },
-  //       { type: "text", value: "ld", marks: ["i", "b"] },
-  //       { type: "text", value: "! 这是一个可编辑的 AST 编辑器。" },
-  //     ],
-  //   },
-  // ];
+  const initialAST: ASTNode[] = [
+    {
+      type: "element",
+      tag: "p",
+      children: [
+        { type: "text", value: "Hello " },
+        { type: "text", value: "Wor", marks: ["b"] },
+        { type: "text", value: "ld", marks: ["i", "b"] },
+        { type: "text", value: "! 这是一个可编辑的 AST 编辑器。" },
+      ],
+    },
+  ];
 
   // const initialAST: ASTNode[] = [
   //   {
@@ -29,17 +29,17 @@ function App() {
   //   },
   // ];
 
-  const initialAST: ASTNode[] = [
-    {
-      type: "element",
-      tag: "p",
-      children: [
-        { type: "text", value: "Hello " },
-        { type: "text", value: "world", marks: ["b"] },
-        { type: "text", value: "! " },
-      ],
-    }
-  ]
+  // const initialAST: ASTNode[] = [
+  //   {
+  //     type: "element",
+  //     tag: "p",
+  //     children: [
+  //       { type: "text", value: "Hello " },
+  //       { type: "text", value: "world", marks: ["b"] },
+  //       { type: "text", value: "! " },
+  //     ],
+  //   }
+  // ]
 
   const handleASTChange = (newAST: ASTNode[]) => {
     console.log("AST 已更新:", newAST);
