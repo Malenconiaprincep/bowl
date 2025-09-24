@@ -117,14 +117,20 @@ describe('formatting', () => {
     });
 
     it('应该处理选区覆盖整个文本节点的情况', () => {
+      // createElementNode('p', [
+      //   createTextNode('Hello '),
+      //   createElementNode('span', [
+      //     createTextNode('world', ['b'])
+      //   ]),
+      //   createTextNode('!')
+      // ])
+
       const ast = createTestAST();
       const selection: Selection = {
         start: 6, // "world" 的开始
         end: 11,  // "world" 的结束
         hasSelection: true
       };
-
-      console.log(JSON.stringify(ast), '>>>ast');
 
       const result = applyFormatToSelection(ast, selection, 'u')[0] as ElementNode
       const children = (result as ElementNode).children

@@ -53,6 +53,36 @@ describe('selection', () => {
         textOffset: 14 // 最后一个节点的长度
       });
     });
+
+    it('应该正确处理节点边界位置', () => {
+      const textNodes = createTestTextNodes(); // ['Hello ', 'world', '! How are you?']
+
+      // 测试在第一个节点末尾 (偏移量 6)
+      const result1 = findNodeAndOffsetBySelectionOffset(textNodes, 6);
+      expect(result1).toEqual({
+        nodeIndex: 0,
+        textOffset: 6
+      });
+
+      // 测试在第二个节点末尾 (偏移量 11 = 6+5)
+      const result2 = findNodeAndOffsetBySelectionOffset(textNodes, 11);
+      expect(result2).toEqual({
+        nodeIndex: 1,
+        textOffset: 5
+      });
+    });
+
+    it('应该正确处理光标在节点末尾的删除操作', () => {
+      const textNodes = createTestTextNodes(); // ['Hello ', 'world', '! How are you?']
+
+      // 模拟光标在 "world" 的 "d" 位置 (偏移量 11)
+      // 当删除时，应该删除 "d"，而不是跳到下一个节点
+      const result = findNodeAndOffsetBySelectionOffset(textNodes, 11);
+      expect(result).toEqual({
+        nodeIndex: 1, // 应该在 "world" 节点
+        textOffset: 5  // 在 "world" 的末尾
+      });
+    });
   });
 
   describe('calculateSelectionOffset', () => {

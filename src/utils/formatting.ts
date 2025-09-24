@@ -53,14 +53,33 @@ function applyFormatToCrossNodeSelection(
   }
 
   // 创建格式化的选中文本节点
-  const selectedMarks = startNode.marks ? [...startNode.marks] : [];
-  if (!selectedMarks.includes(mark)) {
-    selectedMarks.push(mark);
+  // 对于跨节点选区，需要合并所有涉及节点的格式
+  const selectedMarks: Mark[] = [];
+
+  // 收集起始节点的格式
+  if (startNode.marks) {
+    selectedMarks.push(...startNode.marks);
+  }
+
+  // 收集中间节点的格式
+  for (let i = startNodeInfo.nodeIndex + 1; i < endNodeInfo.nodeIndex; i++) {
+    selectedMarks.push(...(textNodes[i].marks || []));
+  }
+
+  // 收集结束节点的格式
+  if (endNode.marks) {
+    selectedMarks.push(...endNode.marks);
+  }
+
+  // 去重并添加新格式
+  const uniqueMarks = [...new Set(selectedMarks)];
+  if (!uniqueMarks.includes(mark)) {
+    uniqueMarks.push(mark);
   }
   const formattedSelectedNode: TextNode = {
     type: "text",
     value: selectedText,
-    marks: selectedMarks
+    marks: uniqueMarks
   };
 
   // 构建新的节点数组
@@ -92,7 +111,7 @@ function applyFormatToCrossNodeSelection(
 
   for (let i = 0; i < newAst.length; i++) {
     if (i === 0) { // 假设第一个节点是 p 标签
-      const pNode = newAst[i] as { children: ASTNode[] };
+      const pNode = newAst[i] as { type: 'element'; tag: string; children: ASTNode[] };
       const newChildren: ASTNode[] = [];
 
       // 添加起始节点之前的所有子节点
@@ -109,7 +128,8 @@ function applyFormatToCrossNodeSelection(
       }
 
       result.push({
-        ...pNode,
+        type: 'element',
+        tag: pNode.tag,
         children: newChildren
       });
     } else {
@@ -168,10 +188,12 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
         originalMarks: targetNode.marks,
         newMark: mark
       });
-      if (!targetNode.marks) targetNode.marks = [];
-      if (!targetNode.marks.includes(mark)) {
-        targetNode.marks.push(mark);
+      // 保留原有格式并添加新格式
+      const originalMarks = targetNode.marks ? [...targetNode.marks] : [];
+      if (!originalMarks.includes(mark)) {
+        originalMarks.push(mark);
       }
+      targetNode.marks = originalMarks;
       console.log('修改后的 marks:', targetNode.marks);
       return newAst;
     }

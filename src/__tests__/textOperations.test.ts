@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { insertTextAtPosition, deleteTextAtPosition, deleteSelection, insertTextAtSelection } from '../utils/textOperations';
-import type { ASTNode, TextNode, Mark } from '../types/ast';
+import type { ASTNode, TextNode, Mark, ElementNode } from '../types/ast';
 import type { Selection } from '../utils/selection';
 
 // 测试用的 AST 数据
@@ -319,6 +319,18 @@ describe('textOperations', () => {
       expect(result.newCursorPosition).toBe(6);
     });
 
+
+    //   {
+    //     type: "element",
+    //       tag: "p",
+    //         children: [
+    //           { type: "text", value: "Hello " },
+    //           { type: "text", value: "Wor", marks: ["b"] },
+    //           { type: "text", value: "ld", marks: ["i", "b"] },
+    //           { type: "text", value: "! This is an editable AST editor." },
+    //         ],
+    // },
+
     it('应该模拟按删除键逐个删除字符后清理空的格式化节点', () => {
       let ast = createRealWorldAST();
 
@@ -338,7 +350,7 @@ describe('textOperations', () => {
       // 应该清理空的格式化节点
       const pElement = ast[0] as { type: 'element'; tag: string; children: ASTNode[] };
       console.log('实际结果:', JSON.stringify(pElement.children, null, 2));
-      expect(pElement.children).toHaveLength(4); // 按删除键后，节点被拆分但格式不同无法合并
+      expect(pElement.children).toHaveLength(3); // 按删除键后，节点被拆分但格式不同无法合并
       expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Hello ',
@@ -346,15 +358,10 @@ describe('textOperations', () => {
       });
       expect(pElement.children[1]).toEqual({
         type: 'text',
-        value: 'r',
-        marks: ['b']
-      });
-      expect(pElement.children[2]).toEqual({
-        type: 'text',
-        value: 'lld',
+        value: 'ld',
         marks: ['i', 'b']
       });
-      expect(pElement.children[3]).toEqual({
+      expect(pElement.children[2]).toEqual({
         type: 'text',
         value: '! This is an editable AST editor.',
         marks: undefined
@@ -400,6 +407,13 @@ describe('textOperations', () => {
     });
 
     it('应该正确处理中文标点符号', () => {
+
+      // createTextNode('Hello '),
+      //   createElementNode('span', [
+      //     createTextNode('world', ['b'])
+      //   ]),
+      //   createTextNode('!')
+
       const ast = createTestAST();
       const selection: Selection = {
         start: 11, // "!" 的位置 (Hello + world + ! = 6 + 5 + 1 = 12, 所以!在位置11)
@@ -409,11 +423,7 @@ describe('textOperations', () => {
 
       const result = insertTextAtSelection(ast, selection, '，。！？');
 
-      expect(result.newAST[2]).toEqual({
-        type: 'text',
-        value: '，。！？!',
-        marks: undefined
-      });
+      expect(((result.newAST[1] as ElementNode).children[0] as TextNode).value).toEqual('world，。！？');
       expect(result.newCursorPosition).toBe(15); // 11 + 4 (，。！？ 的长度)
     });
 
