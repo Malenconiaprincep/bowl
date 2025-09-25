@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getTextNodes, cloneAST, getTargetTextNode, replaceTextNodeInAST, mergeEmptyTextNodes } from '../utils/core';
-import type { ASTNode, TextNode, Mark } from '../types/ast';
+import type { ASTNode, TextNode, Mark, ElementTag } from '../types/ast';
 
 // 测试用的 AST 数据
 const createTextNode = (value: string, marks?: Mark[]): TextNode => ({
@@ -9,7 +9,7 @@ const createTextNode = (value: string, marks?: Mark[]): TextNode => ({
   marks
 });
 
-const createElementNode = (tag: 'p' | 'div' | 'span', children: ASTNode[]): ASTNode => ({
+const createElementNode = (tag: ElementTag, children: ASTNode[]): ASTNode => ({
   type: 'element',
   tag,
   children

@@ -6,9 +6,11 @@ export type TextNode = {
   marks?: Mark[];
 };
 
+export type ElementTag = "p" | "span" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
 export type ElementNode = {
   type: "element";
-  tag: "p" | "div" | "span";
+  tag: ElementTag;
   children: ASTNode[];
 };
 
