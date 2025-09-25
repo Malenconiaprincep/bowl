@@ -111,7 +111,6 @@ describe('selection', () => {
       const selection: Selection = {
         start: 1,
         end: 4,
-        hasSelection: true
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(true);
@@ -121,7 +120,6 @@ describe('selection', () => {
       const selection: Selection = {
         start: 3, // 在第一个文本节点内
         end: 8,   // 在第二个文本节点内
-        hasSelection: true
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(true);
@@ -131,7 +129,6 @@ describe('selection', () => {
       const selection: Selection = {
         start: 8, // 在第二个文本节点内
         end: 8,   // 相同位置
-        hasSelection: false
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(true);
@@ -141,7 +138,6 @@ describe('selection', () => {
       const selection: Selection = {
         start: -1,
         end: 1,
-        hasSelection: true
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(false);
@@ -151,7 +147,6 @@ describe('selection', () => {
       const selection: Selection = {
         start: 0,
         end: 999, // 超出总长度 24
-        hasSelection: true
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(false);
@@ -161,7 +156,6 @@ describe('selection', () => {
       const selection: Selection = {
         start: 10,
         end: 5,
-        hasSelection: true
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(false);
@@ -171,17 +165,15 @@ describe('selection', () => {
       const selection: Selection = {
         start: 0,
         end: 0,
-        hasSelection: true
       };
 
-      expect(isValidSelection(selection, [])).toBe(false);
+      expect(isValidSelection(selection, [])).toBe(true);
     });
 
     it('应该验证在文本末尾的偏移', () => {
       const selection: Selection = {
         start: 24, // 文本末尾
         end: 24,
-        hasSelection: false
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(true);

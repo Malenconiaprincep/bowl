@@ -50,7 +50,6 @@ describe('formatting', () => {
       const selection: Selection = {
         start: 2, // "Hello " 中的 "l"
         end: 4,   // "Hello " 中的 "l"
-        hasSelection: true
       };
 
       const result = applyFormatToSelection(ast, selection, 'b')[0] as ElementNode
@@ -84,7 +83,6 @@ describe('formatting', () => {
       const selection: Selection = {
         start: 3, // "First " 中的 "s"
         end: 9,   // "second " 中的 "o"
-        hasSelection: true
       };
 
       const result = applyFormatToSelection(ast, selection, 'i')[0] as ElementNode
@@ -129,7 +127,6 @@ describe('formatting', () => {
       const selection: Selection = {
         start: 6, // "world" 的开始
         end: 11,  // "world" 的结束
-        hasSelection: true
       };
 
       const result = applyFormatToSelection(ast, selection, 'u')[0] as ElementNode
@@ -152,7 +149,6 @@ describe('formatting', () => {
       const selection: Selection = {
         start: 7, // "world" 中的 "o"
         end: 9,   // "world" 中的 "r"
-        hasSelection: true
       };
 
       const result = applyFormatToSelection(ast, selection, 's')[0] as ElementNode
@@ -188,7 +184,6 @@ describe('formatting', () => {
       const invalidSelection: Selection = {
         start: 100, // 超出范围
         end: 200,
-        hasSelection: true
       };
 
       const result = applyFormatToSelection(ast, invalidSelection, 'b');
@@ -202,7 +197,6 @@ describe('formatting', () => {
       const noSelection: Selection = {
         start: 0,
         end: 0,
-        hasSelection: false
       };
 
       const result = applyFormatToSelection(ast, noSelection, 'b');
@@ -216,7 +210,6 @@ describe('formatting', () => {
       const selection: Selection = {
         start: 0, // "Hello " 的开始
         end: 6,   // "Hello " 的结束
-        hasSelection: true
       };
 
       const result = applyFormatToSelection(ast, selection, 'b')[0] as ElementNode
@@ -231,7 +224,6 @@ describe('formatting', () => {
       const selection: Selection = {
         start: 0, // "H"
         end: 1,   // "H"
-        hasSelection: true
       };
 
       const result = applyFormatToSelection(ast, selection, 'i')[0] as ElementNode

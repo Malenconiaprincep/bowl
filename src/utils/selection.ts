@@ -8,7 +8,11 @@ export type CursorPosition = number;
 export interface Selection {
   start: number;
   end: number;
-  hasSelection: boolean;
+}
+
+// 判断是否有选区
+export function hasSelection(selection: Selection): boolean {
+  return selection.start !== selection.end;
 }
 
 // DOM 节点到文本节点的映射
@@ -22,10 +26,13 @@ export interface NodeMapping {
 
 // 验证选区是否有效
 export function isValidSelection(selection: Selection, textNodes: TextNode[]): boolean {
-  if (!selection.hasSelection) return true;
+  if (!hasSelection(selection)) return true;
 
   const { start, end } = selection;
   const totalLength = textNodes.reduce((sum, node) => sum + node.value.length, 0);
+
+  // 如果没有文本节点，任何选区都是无效的
+  if (textNodes.length === 0) return false;
 
   const startValid = start >= 0 && start <= totalLength;
   const endValid = end >= 0 && end <= totalLength;

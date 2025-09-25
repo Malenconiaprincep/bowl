@@ -206,7 +206,7 @@ describe('core', () => {
 
       const result = replaceTextNodeInAST(ast, 0, newNodes, true);
 
-      console.log(result[1].children, '>>result')
+      // console.log(result[1].children, '>>result')
 
       expect(result[0]).toEqual({
         type: 'element',

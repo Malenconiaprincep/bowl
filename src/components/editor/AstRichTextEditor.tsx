@@ -3,6 +3,7 @@ import type { ASTNode } from "../../types/ast";
 import { useCursorPosition } from "../../hooks/useCursorPosition";
 import { useTextInput } from "../../hooks/useTextInput";
 import { AstEditorToolbar } from "./AstEditorToolbar";
+import { hasSelection } from "../../utils";
 import "../../styles/editor.css";
 
 // 渲染 AST 节点
@@ -132,7 +133,7 @@ export default function ASTEditor({
 
       <div style={{ marginTop: 10, fontSize: '12px', color: '#666' }}>
         <p>光标位置: 偏移 {cursorPosition}</p>
-        <p>选区: {selection.hasSelection ? `从 ${selection.start} 到 ${selection.end}` : '无'}</p>
+        <p>选区: {hasSelection(selection) ? `从 ${selection.start} 到 ${selection.end}` : '无'}</p>
       </div>
     </div>
   );

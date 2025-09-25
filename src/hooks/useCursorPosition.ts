@@ -1,14 +1,13 @@
 import { useState, useRef, useCallback } from "react";
 import type { ASTNode } from "../types/ast";
 import type { Selection } from "../utils";
-import { findSelectionOffsetFromDOM, getTextNodes, findNodeAndOffsetBySelectionOffset } from "../utils";
+import { findSelectionOffsetFromDOM, getTextNodes, findNodeAndOffsetBySelectionOffset, hasSelection } from "../utils";
 
 export function useCursorPosition(ast: ASTNode[]) {
   const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [selection, setSelection] = useState<Selection>({
     start: 0,
-    end: 0,
-    hasSelection: false
+    end: 0
   });
   const [activeCommands, setActiveCommands] = useState<string[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -59,7 +58,7 @@ export function useCursorPosition(ast: ASTNode[]) {
 
   // 恢复选区
   const restoreSelection = useCallback((selection: Selection) => {
-    if (!editorRef.current || !selection.hasSelection) return;
+    if (!editorRef.current || !hasSelection(selection)) return;
 
     const textNodes = getTextNodes(ast);
     const startNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
@@ -142,8 +141,7 @@ export function useCursorPosition(ast: ASTNode[]) {
 
       setSelection({
         start: startPosition,
-        end: endPosition,
-        hasSelection: true
+        end: endPosition
       });
     } else {
       // 计算光标位置
@@ -160,8 +158,7 @@ export function useCursorPosition(ast: ASTNode[]) {
       setCursorPosition(cursorPos);
       setSelection({
         start: cursorPos,
-        end: cursorPos,
-        hasSelection: false
+        end: cursorPos
       });
 
       // 检查激活状态

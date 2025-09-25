@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import type { EditorCommand } from "../../types/editor";
 import type { Mark, Selection } from "../../utils";
 import { EditorToolbar } from "../toolbar/EditorToolbar";
-import { applyFormatToSelection, getTextNodes, findNodeAndOffsetBySelectionOffset } from "../../utils";
+import { applyFormatToSelection, getTextNodes, findNodeAndOffsetBySelectionOffset, hasSelection } from "../../utils";
 import type { ASTNode } from "../../types/ast";
 
 interface AstEditorToolbarProps {
@@ -26,7 +26,7 @@ export const AstEditorToolbar: React.FC<AstEditorToolbarProps> = ({
 }) => {
   // 执行格式化命令
   const executeCommand = useCallback((mark: Mark) => {
-    if (selection.hasSelection) {
+    if (hasSelection(selection)) {
       // 对选区应用格式化
       // 保存当前选区，以便在 AST 更新后恢复
       pendingSelection.current = { ...selection };

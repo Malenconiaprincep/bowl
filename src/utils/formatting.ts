@@ -1,7 +1,7 @@
 import type { ASTNode, TextNode, Mark } from "../types/ast";
 import { cloneAST, getTextNodes, getTargetTextNode, replaceTextNodeInAST } from "./core";
 import type { Selection } from "./selection";
-import { isValidSelection, findNodeAndOffsetBySelectionOffset } from "./selection";
+import { isValidSelection, findNodeAndOffsetBySelectionOffset, hasSelection } from "./selection";
 
 // 文本切片操作
 function sliceText(text: string, startOffset: number, endOffset?: number): {
@@ -142,7 +142,7 @@ function applyFormatToCrossNodeSelection(
 
 // 应用格式化到选区
 export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mark: Mark): ASTNode[] {
-  if (!selection.hasSelection) return ast;
+  if (!hasSelection(selection)) return ast;
 
   const newAst = cloneAST(ast);
   const textNodes = getTextNodes(newAst);

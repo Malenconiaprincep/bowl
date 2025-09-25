@@ -1,7 +1,7 @@
 import type { ASTNode } from "../types/ast";
 import { cloneAST, getTextNodes, getTargetTextNode, cleanupEmptyNodes } from "./core";
 import type { Selection } from "./selection";
-import { isValidSelection, findNodeAndOffsetBySelectionOffset } from "./selection";
+import { isValidSelection, findNodeAndOffsetBySelectionOffset, hasSelection } from "./selection";
 
 // 文本切片操作
 function sliceText(text: string, startOffset: number, endOffset?: number): {
@@ -101,7 +101,9 @@ export function deleteTextAtPosition(ast: ASTNode[], position: number, length: n
   const targetNode = getTargetTextNode(newAst, nodeIndex);
 
   if (targetNode) {
-    const { before, after } = sliceText(targetNode.value, textOffset - length, textOffset);
+    // 确保删除范围在有效范围内
+    const startOffset = Math.max(0, textOffset - length);
+    const { before, after } = sliceText(targetNode.value, startOffset, textOffset);
     targetNode.value = before + after;
   }
 
@@ -120,7 +122,7 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
 
   let newCursorPosition: number;
 
-  if (selection.hasSelection) {
+  if (hasSelection(selection)) {
     // 有选区时，删除选中内容
     const { start, end } = selection;
     const startPos = findNodeAndOffsetBySelectionOffset(textNodes, start);
@@ -178,7 +180,7 @@ export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text
 
   let newCursorPosition: number;
 
-  if (selection.hasSelection) {
+  if (hasSelection(selection)) {
     // 有选区时，先删除选中内容，再插入新文本
     const { start, end } = selection;
     const startPos = findNodeAndOffsetBySelectionOffset(textNodes, start);
