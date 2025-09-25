@@ -4,7 +4,6 @@ import type { Selection } from "../utils";
 import { findSelectionOffsetFromDOM, getTextNodes, findNodeAndOffsetBySelectionOffset, hasSelection } from "../utils";
 
 export function useCursorPosition(ast: ASTNode[]) {
-  const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [selection, setSelection] = useState<Selection>({
     start: 0,
     end: 0
@@ -12,16 +11,15 @@ export function useCursorPosition(ast: ASTNode[]) {
   const [activeCommands, setActiveCommands] = useState<string[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromState = useRef(false);
-  const pendingCursorPosition = useRef<number | null>(null);
   const pendingSelection = useRef<Selection | null>(null);
   const isComposing = useRef(false);
 
-  // 恢复光标位置
-  const restoreCursorPosition = useCallback((position: number) => {
+  // 恢复光标位置（使用 selection 参数）
+  const restoreCursorPosition = useCallback((selection: Selection) => {
     if (!editorRef.current) return;
 
     const textNodes = getTextNodes(ast);
-    const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, position);
+    const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
     const targetNode = textNodes[nodeIndex];
 
     if (targetNode) {
@@ -105,7 +103,7 @@ export function useCursorPosition(ast: ASTNode[]) {
   // 检查当前光标位置的激活状态
   const checkActiveCommands = useCallback(() => {
     const textNodes = getTextNodes(ast);
-    const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, cursorPosition);
+    const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
     const currentTextNode = textNodes[nodeIndex];
 
     if (currentTextNode && currentTextNode.marks) {
@@ -113,7 +111,7 @@ export function useCursorPosition(ast: ASTNode[]) {
     } else {
       setActiveCommands([]);
     }
-  }, [ast, cursorPosition]);
+  }, [ast, selection.start]);
 
   // 处理选区变化
   const handleSelectionChange = useCallback(() => {
@@ -154,8 +152,7 @@ export function useCursorPosition(ast: ASTNode[]) {
         cursorPos
       });
 
-      // 更新光标位置和选区信息，确保它们同步
-      setCursorPosition(cursorPos);
+      // 更新选区信息，光标时 start 和 end 相同
       setSelection({
         start: cursorPos,
         end: cursorPos
@@ -198,15 +195,12 @@ export function useCursorPosition(ast: ASTNode[]) {
   }, [handleSelectionChange]);
 
   return {
-    cursorPosition,
-    setCursorPosition,
     selection,
     setSelection,
     activeCommands,
     setActiveCommands,
     editorRef,
     isUpdatingFromState,
-    pendingCursorPosition,
     pendingSelection,
     restoreCursorPosition,
     restoreSelection,

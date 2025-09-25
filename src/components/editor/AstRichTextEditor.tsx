@@ -46,13 +46,11 @@ export default function ASTEditor({
 
   // 使用光标位置管理 hook
   const {
-    cursorPosition,
-    setCursorPosition,
     selection,
+    setSelection,
     activeCommands,
     editorRef,
     isUpdatingFromState,
-    pendingCursorPosition,
     pendingSelection,
     restoreCursorPosition,
     restoreSelection,
@@ -75,24 +73,26 @@ export default function ASTEditor({
   useLayoutEffect(() => {
     if (pendingSelection.current) {
       // 如果有待恢复的选区，恢复选区
-      restoreSelection(pendingSelection.current);
+      if (pendingSelection.current.start === pendingSelection.current.end) {
+        // 如果是光标位置（start === end），使用 restoreCursorPosition
+        restoreCursorPosition(pendingSelection.current);
+      } else {
+        // 如果是选区，使用 restoreSelection
+        restoreSelection(pendingSelection.current);
+      }
       pendingSelection.current = null;
-    } else if (pendingCursorPosition.current) {
-      // 否则恢复光标位置
-      restoreCursorPosition(pendingCursorPosition.current);
-      pendingCursorPosition.current = null;
     }
     isUpdatingFromState.current = false;
     // 检查激活状态
     checkActiveCommands();
-  }, [ast, restoreCursorPosition, restoreSelection, checkActiveCommands, pendingCursorPosition, pendingSelection, isUpdatingFromState]);
+  }, [ast, restoreCursorPosition, restoreSelection, checkActiveCommands, pendingSelection, isUpdatingFromState]);
 
   // 使用文本输入处理 hook
   const { handleKeyDown } = useTextInput(
     ast,
-    setCursorPosition,
+    setSelection,
     updateAST,
-    pendingCursorPosition,
+    pendingSelection,
     selection,
     editorRef,
     isComposing
@@ -124,15 +124,13 @@ export default function ASTEditor({
       <AstEditorToolbar
         ast={ast}
         selection={selection}
-        cursorPosition={cursorPosition}
         activeCommands={activeCommands}
         onUpdateAST={updateAST}
-        pendingCursorPosition={pendingCursorPosition}
         pendingSelection={pendingSelection}
       />
 
       <div style={{ marginTop: 10, fontSize: '12px', color: '#666' }}>
-        <p>光标位置: 偏移 {cursorPosition}</p>
+        <p>光标位置: 偏移 {selection.start}</p>
         <p>选区: {hasSelection(selection) ? `从 ${selection.start} 到 ${selection.end}` : '无'}</p>
       </div>
     </div>

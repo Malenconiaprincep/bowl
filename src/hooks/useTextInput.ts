@@ -5,9 +5,9 @@ import { insertTextAtSelection, deleteSelection } from "../utils";
 
 export function useTextInput(
   ast: ASTNode[],
-  setCursorPosition: (position: number) => void,
+  setSelection: (selection: Selection) => void,
   onUpdateAST: (newAST: ASTNode[]) => void,
-  pendingCursorPosition: React.MutableRefObject<number | null>,
+  pendingSelection: React.MutableRefObject<Selection | null>,
   selection: Selection,
   editorRef: React.RefObject<HTMLDivElement | null>,
   isComposing: React.MutableRefObject<boolean>
@@ -17,22 +17,24 @@ export function useTextInput(
     const { newAST, newCursorPosition } = insertTextAtSelection(ast, selection, text);
 
     // 设置待恢复的光标位置
-    pendingCursorPosition.current = newCursorPosition;
-    setCursorPosition(newCursorPosition);
+    const newSelection = { start: newCursorPosition, end: newCursorPosition };
+    pendingSelection.current = newSelection;
+    setSelection(newSelection);
 
     onUpdateAST(newAST);
-  }, [ast, selection, setCursorPosition, onUpdateAST, pendingCursorPosition]);
+  }, [ast, selection, setSelection, onUpdateAST, pendingSelection]);
 
   // 处理删除操作
   const handleDelete = useCallback(() => {
     const { newAST, newCursorPosition } = deleteSelection(ast, selection);
 
     // 设置待恢复的光标位置
-    pendingCursorPosition.current = newCursorPosition;
-    setCursorPosition(newCursorPosition);
+    const newSelection = { start: newCursorPosition, end: newCursorPosition };
+    pendingSelection.current = newSelection;
+    setSelection(newSelection);
 
     onUpdateAST(newAST);
-  }, [ast, selection, setCursorPosition, onUpdateAST, pendingCursorPosition]);
+  }, [ast, selection, setSelection, onUpdateAST, pendingSelection]);
 
   // 使用原生事件监听器处理 beforeInput
   useEffect(() => {
