@@ -20,10 +20,6 @@ export default function BlockContainer({
 
   console.log(JSON.stringify(block.content), '>>>1')
   switch (block.type) {
-    // case "paragraph":
-    //   return <ParagraphBlock block={block} />;
-    // case "heading":
-    //   return <HeadingBlock block={block} />;
     // case "media":
     //   return <MediaBlock block={block} />;
 
