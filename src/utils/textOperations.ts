@@ -225,3 +225,85 @@ export function insertTextAtSelection(ast: ASTNode[], selection: Selection, text
     };
   }
 }
+
+// 在光标位置拆分文本，返回前面的AST和后面的AST
+export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
+  beforeAST: ASTNode[],
+  afterAST: ASTNode[],
+  newCursorPosition: number
+} {
+  const newAst = cloneAST(ast);
+  const textNodes = getTextNodes(newAst);
+
+  // 验证选区有效性
+  if (!isValidSelection(selection, textNodes)) {
+    return {
+      beforeAST: ast,
+      afterAST: [],
+      newCursorPosition: selection.start
+    };
+  }
+
+  const { start } = selection;
+  const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, start);
+  const targetNode = getTargetTextNode(newAst, nodeIndex);
+
+  if (!targetNode) {
+    return {
+      beforeAST: ast,
+      afterAST: [],
+      newCursorPosition: start
+    };
+  }
+
+  // 拆分文本：光标前和光标后
+  const { before, after } = sliceText(targetNode.value, textOffset);
+
+  // 创建前面的AST（只保留光标前的文本）
+  const beforeAST = cloneAST(ast);
+  const beforeTargetNode = getTargetTextNode(beforeAST, nodeIndex);
+  if (beforeTargetNode) {
+    beforeTargetNode.value = before;
+  }
+
+  // 创建后面的AST（包含光标后的文本）
+  let afterAST: ASTNode[] = [];
+  if (after !== '') {
+    // 如果有光标后的文本，创建新的文本节点
+    const afterTextNode: ASTNode = {
+      type: "text",
+      value: after,
+      marks: targetNode.marks ? [...targetNode.marks] : undefined
+    };
+
+    // 创建包含后面文本的段落结构
+    afterAST = [{
+      type: "element",
+      tag: "p",
+      children: [afterTextNode]
+    }];
+  } else {
+    // 如果光标后没有文本，创建空的段落
+    const emptyTextNode: ASTNode = {
+      type: "text",
+      value: "",
+      marks: targetNode.marks ? [...targetNode.marks] : undefined
+    };
+
+    afterAST = [{
+      type: "element",
+      tag: "p",
+      children: [emptyTextNode]
+    }];
+  }
+
+  // 新光标位置在后面的AST的开始
+  const newCursorPosition = 0;
+
+  return {
+    beforeAST: cleanupEmptyNodes(beforeAST),
+    afterAST,
+    newCursorPosition
+  };
+}
+

@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from "react";
 import type { ASTNode } from "../types/ast";
+import type { Block } from "../types/blocks";
 import type { Selection } from "../utils";
-import { insertTextAtSelection, deleteSelection } from "../utils";
+import { insertTextAtSelection, deleteSelection, splitTextAtCursor } from "../utils";
 
 export function useTextInput(
   ast: ASTNode[],
@@ -10,7 +11,9 @@ export function useTextInput(
   pendingSelection: React.MutableRefObject<Selection | null>,
   selection: Selection,
   editorRef: React.RefObject<HTMLDivElement | null>,
-  isComposing: React.MutableRefObject<boolean>
+  isComposing: React.MutableRefObject<boolean>,
+  blockIndex?: number,
+  onInsertBlock?: (blockIndex: number, newBlock: Block) => void
 ) {
   // 处理文本输入
   const handleTextInput = useCallback((text: string) => {
@@ -88,6 +91,32 @@ export function useTextInput(
         }
         return;
       }
+
+      if (inputEvent.inputType === 'insertParagraph') {
+        e.preventDefault();
+
+        // 回车后进行数据拆分
+        const { beforeAST, afterAST, newCursorPosition } = splitTextAtCursor(ast, selection);
+
+        // 更新当前块的AST（前面的部分）
+        onUpdateAST(beforeAST);
+
+        // 设置新的光标位置
+        const newSelection = { start: newCursorPosition, end: newCursorPosition };
+        pendingSelection.current = newSelection;
+        setSelection(newSelection);
+
+        // 将afterAST插入到PageBlock的新位置
+        if (afterAST.length > 0 && blockIndex !== undefined && onInsertBlock) {
+          const newBlock: Block = {
+            type: "paragraph",
+            content: afterAST
+          };
+          onInsertBlock(blockIndex, newBlock);
+        }
+
+        return;
+      }
     };
 
     // 处理组合输入结束事件
@@ -124,16 +153,10 @@ export function useTextInput(
       editor.removeEventListener('compositionstart', handleCompositionStart);
       editor.removeEventListener('compositionend', handleCompositionEnd);
     };
-  }, [editorRef, handleTextInput, handleDelete, isComposing]);
+  }, [editorRef, handleTextInput, handleDelete, isComposing, ast, onUpdateAST, pendingSelection, selection, setSelection, blockIndex, onInsertBlock]);
 
   // 处理键盘事件（保留用于快捷键）
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // 禁用 Enter 键换行
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      return;
-    }
-
     // 只处理我们自定义的格式化快捷键，让系统默认快捷键正常工作
     if (e.ctrlKey || e.metaKey) {
       switch (e.key) {

@@ -62,7 +62,7 @@ describe('core', () => {
 
     it('应该处理只有元素节点的 AST', () => {
       const ast: ASTNode[] = [
-        createElementNode('div', [
+        createElementNode('p', [
           createElementNode('span', [])
         ])
       ];
@@ -110,7 +110,7 @@ describe('core', () => {
 
     it('应该深拷贝嵌套结构', () => {
       const ast: ASTNode[] = [
-        createElementNode('div', [
+        createElementNode('p', [
           createTextNode('nested', ['b']),
           createElementNode('span', [
             createTextNode('deep', ['i'])

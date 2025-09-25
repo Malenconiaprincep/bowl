@@ -1,12 +1,14 @@
 import "./App.css";
 import PageBlock from "./blocks/page";
 import type { Block } from "./types/blocks";
+import { v4 as uuidv4 } from 'uuid';
 
 function App() {
 
   const initialBlocks: Block[] = [
     {
       type: "paragraph",
+      id: uuidv4(),
       content: [{
         type: "element",
         tag: "p",
@@ -19,6 +21,7 @@ function App() {
     },
     {
       type: "paragraph",
+      id: uuidv4(),
       content: [{
         type: "element",
         tag: "p",

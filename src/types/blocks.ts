@@ -19,4 +19,8 @@ export type MediaBlock = {
 
 export type TextBlock = ParagraphBlock | HeadingBlock;
 
-export type Block = MediaBlock | TextBlock;
+export type Blocks = MediaBlock | TextBlock;
+
+export type Block = Blocks & {
+  id?: string;
+};

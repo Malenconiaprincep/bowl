@@ -1,5 +1,6 @@
 import { useState, useCallback, useLayoutEffect } from "react";
 import type { ASTNode } from "../../types/ast";
+import type { Block } from "../../types/blocks";
 import { useCursorPosition } from "../../hooks/useCursorPosition";
 import { useTextInput } from "../../hooks/useTextInput";
 // import { AstEditorToolbar } from "./AstEditorToolbar";
@@ -37,10 +38,14 @@ function renderNode(node: ASTNode, key: number): React.ReactNode {
 
 export default function ASTEditor({
   initialAST,
-  onChange
+  onChange,
+  blockIndex,
+  onInsertBlock
 }: {
   initialAST: ASTNode[];
   onChange?: (ast: ASTNode[]) => void;
+  blockIndex?: number;
+  onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
 }) {
   const [ast, setAst] = useState<ASTNode[]>(initialAST);
 
@@ -95,7 +100,9 @@ export default function ASTEditor({
     pendingSelection,
     selection,
     editorRef,
-    isComposing
+    isComposing,
+    blockIndex,
+    onInsertBlock
   );
 
   return (
