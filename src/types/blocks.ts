@@ -1,21 +1,22 @@
-import type { ElementNode } from "./ast";
+import type { ASTNode } from "./ast";
 
-export type Block = {
-  type: "paragraph" | "heading" | "media";
-  content: string;
-};
 
 export type ParagraphBlock = {
   type: "paragraph";
-  content: ElementNode;
+  content: ASTNode[];
 };
 
 export type HeadingBlock = {
   type: "heading";
-  content: ElementNode;
+  content: ASTNode[];
 };
 
 export type MediaBlock = {
   type: "media";
   content: string;
 };
+
+
+export type TextBlock = ParagraphBlock | HeadingBlock;
+
+export type Block = MediaBlock | TextBlock;
