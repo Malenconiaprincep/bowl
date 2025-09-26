@@ -16,12 +16,12 @@ const createElementNode = (tag: ElementTag, children: ASTNode[]): ASTNode => ({
 });
 
 const createTestAST = (): ASTNode[] => [
-  createTextNode('Hello '),
-  createElementNode('span', [
+  createElementNode('p', [
+    createTextNode('Hello '),
     createTextNode('world', ['b']),
-    createTextNode('!', ['i'])
+    createTextNode('!', ['i']),
+    createTextNode(' How are you?')
   ]),
-  createTextNode(' How are you?')
 ];
 
 describe('core', () => {
@@ -93,10 +93,13 @@ describe('core', () => {
       expect(cloned).not.toBe(ast); // 不是同一个引用
 
       // 修改克隆后的 AST 不应该影响原 AST
-      const textNode = cloned[0] as TextNode;
+      const pElement = cloned[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      const textNode = pElement.children[0] as TextNode;
       textNode.value = 'Modified';
 
-      expect((ast[0] as TextNode).value).toBe('Hello ');
+      const originalPElement = ast[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      const originalTextNode = originalPElement.children[0] as TextNode;
+      expect(originalTextNode.value).toBe('Hello ');
       expect(textNode.value).toBe('Modified');
     });
 
@@ -189,8 +192,9 @@ describe('core', () => {
       ];
 
       const result = replaceTextNodeInAST(ast, 0, newNodes);
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
 
-      expect(result[0]).toEqual({
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'replaced',
         marks: ['b', 'i']
@@ -205,10 +209,9 @@ describe('core', () => {
       ];
 
       const result = replaceTextNodeInAST(ast, 0, newNodes, true);
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
 
-      // console.log(result[1].children, '>>result')
-
-      expect(result[0]).toEqual({
+      expect(pElement.children[0]).toEqual({
         type: 'element',
         tag: 'span',
         children: [
@@ -232,10 +235,9 @@ describe('core', () => {
       const newNodes: TextNode[] = [createTextNode('nested-replaced', ['u'])];
 
       const result = replaceTextNodeInAST(ast, 1, newNodes);
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const spanElement = result[1] as any;
-      expect(spanElement.children[0]).toEqual({
+      expect(pElement.children[1]).toEqual({
         type: 'text',
         value: 'nested-replaced',
         marks: ['u']
