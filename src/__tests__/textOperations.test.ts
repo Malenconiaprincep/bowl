@@ -16,30 +16,23 @@ const createElementNode = (tag: ElementTag, children: ASTNode[]): ASTNode => ({
   children
 });
 
+
 // 基于用户实际数据的测试用例
 const createRealWorldAST = (): ASTNode[] => [
-  {
-    type: "element",
-    tag: "p",
-    children: [
-      { type: "text", value: "Hello " },
-      { type: "text", value: "Wor", marks: ["b"] },
-      { type: "text", value: "ld", marks: ["i", "b"] },
-      { type: "text", value: "! This is an editable AST editor." },
-    ],
-  },
+  createElementNode('p', [
+    createTextNode('Hello '),
+    createTextNode('Wor', ['b']),
+    createTextNode('ld', ['i', 'b']),
+    createTextNode('! This is an editable AST editor.'),
+  ]),
 ];
 
 const createRealWorldAST2 = (): ASTNode[] => [
-  {
-    type: "element",
-    tag: "p",
-    children: [
-      { type: "text", value: "Hello " },
-      { type: "text", value: "World", marks: ["b"] },
-      { type: "text", value: "!" },
-    ],
-  },
+  createElementNode('p', [
+    createTextNode('Hello '),
+    createTextNode('World', ['b']),
+    createTextNode('!'),
+  ]),
 ];
 
 describe('textOperations', () => {
@@ -444,11 +437,11 @@ describe('textOperations', () => {
 
     it('应该正确处理中文删除操作', () => {
       const ast = [
-        createTextNode('你好世界'),
-        createElementNode('span', [
-          createTextNode('测试', ['b'])
-        ]),
-        createTextNode('！')
+        createElementNode('p', [
+          createTextNode('你好世界'),
+          createTextNode('测试', ['b']),
+          createTextNode('！')
+        ])
       ];
 
       const selection: Selection = {
@@ -457,8 +450,9 @@ describe('textOperations', () => {
       };
 
       const result = deleteSelection(ast, selection);
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
 
-      expect(result.newAST[0]).toEqual({
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: '你世界',
         marks: undefined
@@ -468,11 +462,11 @@ describe('textOperations', () => {
 
     it('应该正确处理中文选区删除', () => {
       const ast = [
-        createTextNode('你好世界'),
-        createElementNode('span', [
-          createTextNode('测试', ['b'])
-        ]),
-        createTextNode('！')
+        createElementNode('p', [
+          createTextNode('你好世界'),
+          createTextNode('测试', ['b']),
+          createTextNode('！')
+        ])
       ];
 
       const selection: Selection = {
@@ -481,8 +475,9 @@ describe('textOperations', () => {
       };
 
       const result = deleteSelection(ast, selection);
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
 
-      expect(result.newAST[0]).toEqual({
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: '你界',
         marks: undefined
@@ -492,11 +487,11 @@ describe('textOperations', () => {
 
     it('应该正确处理包含中文的跨节点操作', () => {
       const ast = [
-        createTextNode('你好'),
-        createElementNode('span', [
-          createTextNode('世界', ['b'])
-        ]),
-        createTextNode('！')
+        createElementNode('p', [
+          createTextNode('你好'),
+          createTextNode('世界', ['b']),
+          createTextNode('！')
+        ])
       ];
 
       const selection: Selection = {
@@ -505,21 +500,15 @@ describe('textOperations', () => {
       };
 
       const result = insertTextAtSelection(ast, selection, '测试');
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
 
-      expect(result.newAST[0]).toEqual({
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: '你测试',
         marks: undefined
       });
-      expect(result.newAST[1]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: '界',
-          marks: ['b']
-        }]
-      });
+
+      expect(pElement.children[1]).toEqual({ type: 'text', value: '界', marks: ['b'] });
       expect(result.newCursorPosition).toBe(3); // 1 + 2 (测试 的长度)
     });
 

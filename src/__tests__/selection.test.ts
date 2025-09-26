@@ -1,25 +1,45 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { isValidSelection, buildNodeMapping, findNodeAndOffsetBySelectionOffset, calculateSelectionOffset, findSelectionOffsetFromDOM } from '../utils/selection';
-import type { TextNode, Mark, ASTNode } from '../types/ast';
+import type { TextNode, ASTNode } from '../types/ast';
 import type { Selection } from '../utils/selection';
 
-// 测试用的文本节点数据
-const createTextNode = (value: string, marks?: Mark[]): TextNode => ({
-  type: 'text',
-  value,
-  marks
-});
+// 测试用的文本节点数据（现在使用真实AST结构）
 
-const createTestTextNodes = (): TextNode[] => [
-  createTextNode('Hello '),
-  createTextNode('world', ['b']),
-  createTextNode('! How are you?')
+const createTestAST = (): ASTNode[] => [
+  {
+    type: "element",
+    tag: "p",
+    children: [
+      { type: "text", value: "Hello " },
+      { type: "text", value: "Wor", marks: ["b"] },
+      { type: "text", value: "ld", marks: ["i", "b"] },
+      { type: "text", value: "! This is an editable AST editor." },
+    ],
+  },
 ];
+
+// 从AST中提取文本节点的辅助函数
+const extractTextNodes = (ast: ASTNode[]): TextNode[] => {
+  const textNodes: TextNode[] = [];
+
+  const traverse = (nodes: ASTNode[]) => {
+    for (const node of nodes) {
+      if (node.type === 'text') {
+        textNodes.push(node);
+      } else if (node.type === 'element') {
+        traverse(node.children);
+      }
+    }
+  };
+
+  traverse(ast);
+  return textNodes;
+};
 
 describe('selection', () => {
   describe('findNodeAndOffsetBySelectionOffset', () => {
     it('应该根据全局偏移量找到对应的文本节点索引和偏移量', () => {
-      const textNodes = createTestTextNodes(); // ['Hello ', 'world', '! How are you?']
+      const textNodes = extractTextNodes(createTestAST()); // ['Hello ', 'Wor', 'ld', '! This is an editable AST editor.']
 
       // 测试在第一个文本节点内
       const result1 = findNodeAndOffsetBySelectionOffset(textNodes, 3);
@@ -36,26 +56,26 @@ describe('selection', () => {
       });
 
       // 测试在第三个文本节点内
-      const result3 = findNodeAndOffsetBySelectionOffset(textNodes, 15); // 6 + 5 + 4
+      const result3 = findNodeAndOffsetBySelectionOffset(textNodes, 12); // 6 + 3 + 3
       expect(result3).toEqual({
-        nodeIndex: 2,
-        textOffset: 4
+        nodeIndex: 3,
+        textOffset: 1
       });
     });
 
     it('应该处理超出范围的情况', () => {
-      const textNodes = createTestTextNodes();
+      const textNodes = extractTextNodes(createTestAST());
 
       // 测试超出范围的情况
       const result = findNodeAndOffsetBySelectionOffset(textNodes, 999);
       expect(result).toEqual({
-        nodeIndex: 2, // 最后一个节点
-        textOffset: 14 // 最后一个节点的长度
+        nodeIndex: 3, // 最后一个节点
+        textOffset: 33 // 最后一个节点的长度
       });
     });
 
     it('应该正确处理节点边界位置', () => {
-      const textNodes = createTestTextNodes(); // ['Hello ', 'world', '! How are you?']
+      const textNodes = extractTextNodes(createTestAST()); // ['Hello ', 'Wor', 'ld', '! This is an editable AST editor.']
 
       // 测试在第一个节点末尾 (偏移量 6)
       const result1 = findNodeAndOffsetBySelectionOffset(textNodes, 6);
@@ -64,30 +84,30 @@ describe('selection', () => {
         textOffset: 6
       });
 
-      // 测试在第二个节点末尾 (偏移量 11 = 6+5)
-      const result2 = findNodeAndOffsetBySelectionOffset(textNodes, 11);
+      // 测试在第二个节点末尾 (偏移量 9 = 6+3)
+      const result2 = findNodeAndOffsetBySelectionOffset(textNodes, 9);
       expect(result2).toEqual({
         nodeIndex: 1,
-        textOffset: 5
+        textOffset: 3
       });
     });
 
     it('应该正确处理光标在节点末尾的删除操作', () => {
-      const textNodes = createTestTextNodes(); // ['Hello ', 'world', '! How are you?']
+      const textNodes = extractTextNodes(createTestAST()); // ['Hello ', 'Wor', 'ld', '! This is an editable AST editor.']
 
-      // 模拟光标在 "world" 的 "d" 位置 (偏移量 11)
-      // 当删除时，应该删除 "d"，而不是跳到下一个节点
-      const result = findNodeAndOffsetBySelectionOffset(textNodes, 11);
+      // 模拟光标在 "Wor" 的 "r" 位置 (偏移量 9)
+      // 当删除时，应该删除 "r"，而不是跳到下一个节点
+      const result = findNodeAndOffsetBySelectionOffset(textNodes, 9);
       expect(result).toEqual({
-        nodeIndex: 1, // 应该在 "world" 节点
-        textOffset: 5  // 在 "world" 的末尾
+        nodeIndex: 1, // 应该在 "Wor" 节点
+        textOffset: 3  // 在 "Wor" 的末尾
       });
     });
   });
 
   describe('calculateSelectionOffset', () => {
     it('应该根据文本节点索引和偏移量计算全局偏移量', () => {
-      const textNodes = createTestTextNodes(); // ['Hello ', 'world', '! How are you?']
+      const textNodes = extractTextNodes(createTestAST()); // ['Hello ', 'Wor', 'ld', '! This is an editable AST editor.']
 
       // 测试第一个文本节点
       expect(calculateSelectionOffset(textNodes, 0, 3)).toBe(3);
@@ -96,7 +116,7 @@ describe('selection', () => {
       expect(calculateSelectionOffset(textNodes, 1, 2)).toBe(8); // 6 + 2
 
       // 测试第三个文本节点
-      expect(calculateSelectionOffset(textNodes, 2, 4)).toBe(15); // 6 + 5 + 4
+      expect(calculateSelectionOffset(textNodes, 2, 1)).toBe(10); // 6 + 3 + 1
     });
   });
 
@@ -104,7 +124,7 @@ describe('selection', () => {
     let textNodes: TextNode[];
 
     beforeEach(() => {
-      textNodes = createTestTextNodes(); // ['Hello ', 'world', '! How are you?'] - 总长度 24
+      textNodes = extractTextNodes(createTestAST()); // ['Hello ', 'Wor', 'ld', '! This is an editable AST editor.'] - 总长度 43
     });
 
     it('应该验证有效的选区', () => {
@@ -146,7 +166,7 @@ describe('selection', () => {
     it('应该拒绝超出文本长度的偏移', () => {
       const selection: Selection = {
         start: 0,
-        end: 999, // 超出总长度 24
+        end: 999, // 超出总长度 43
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(false);
@@ -172,8 +192,8 @@ describe('selection', () => {
 
     it('应该验证在文本末尾的偏移', () => {
       const selection: Selection = {
-        start: 24, // 文本末尾
-        end: 24,
+        start: 43, // 文本末尾
+        end: 43,
       };
 
       expect(isValidSelection(selection, textNodes)).toBe(true);
