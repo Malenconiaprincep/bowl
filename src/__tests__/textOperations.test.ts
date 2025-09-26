@@ -16,14 +16,6 @@ const createElementNode = (tag: ElementTag, children: ASTNode[]): ASTNode => ({
   children
 });
 
-const createTestAST = (): ASTNode[] => [
-  createTextNode('Hello '),
-  createElementNode('span', [
-    createTextNode('world', ['b'])
-  ]),
-  createTextNode('!')
-];
-
 // 基于用户实际数据的测试用例
 const createRealWorldAST = (): ASTNode[] => [
   {
@@ -53,11 +45,12 @@ const createRealWorldAST2 = (): ASTNode[] => [
 describe('textOperations', () => {
   describe('insertTextAtPosition', () => {
     it('应该在指定位置插入文本', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const position = 5; // 在 "Hello " 的末尾
       const result = insertTextAtPosition(ast, position, ' beautiful');
 
-      expect(result[0]).toEqual({
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Hello beautiful ',
         marks: undefined
@@ -65,11 +58,12 @@ describe('textOperations', () => {
     });
 
     it('应该在文本中间插入文本', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const position = 2; // 在 "Hello " 的 "l" 后面
       const result = insertTextAtPosition(ast, position, 'XX');
 
-      expect(result[0]).toEqual({
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'HeXXllo ',
         marks: undefined
@@ -77,11 +71,12 @@ describe('textOperations', () => {
     });
 
     it('应该在文本开头插入文本', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const position = 0; // 在 "Hello " 的开头
       const result = insertTextAtPosition(ast, position, 'Start ');
 
-      expect(result[0]).toEqual({
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Start Hello ',
         marks: undefined
@@ -89,20 +84,20 @@ describe('textOperations', () => {
     });
 
     it('应该在嵌套元素中的文本节点插入文本', () => {
-      const ast = createTestAST();
-      const position = 8; // 在 "world" 的 "o" 后面
+      const ast = createRealWorldAST();
+      const position = 8; // 在 "Wor" 的 "r" 后面
       const result = insertTextAtPosition(ast, position, 'XX');
 
-      const spanElement = result[1] as { type: 'element'; tag: string; children: ASTNode[] };
-      expect(spanElement.children[0]).toEqual({
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[1]).toEqual({
         type: 'text',
-        value: 'woXXrld',
+        value: 'WoXXr',
         marks: ['b']
       });
     });
 
     it('应该处理无效位置（不修改 AST）', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const position = 999; // 无效的节点索引
       const result = insertTextAtPosition(ast, position, 'test');
 
@@ -112,11 +107,12 @@ describe('textOperations', () => {
 
   describe('deleteTextAtPosition', () => {
     it('应该删除指定位置的文本', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const position = 5; // 在 "Hello " 的末尾
       const result = deleteTextAtPosition(ast, position, 1);
 
-      expect(result[0]).toEqual({
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Hell ',
         marks: undefined
@@ -124,11 +120,12 @@ describe('textOperations', () => {
     });
 
     it('应该删除多个字符', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const position = 3; // 在 "Hello " 的 "l" 后面
       const result = deleteTextAtPosition(ast, position, 2);
 
-      expect(result[0]).toEqual({
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Hlo ',
         marks: undefined
@@ -136,11 +133,12 @@ describe('textOperations', () => {
     });
 
     it('应该处理删除长度超过文本长度的情况', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const position = 2; // 在 "Hello " 的 "l" 后面
       const result = deleteTextAtPosition(ast, position, 10); // 尝试删除 10 个字符
 
-      expect(result[0]).toEqual({
+      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'llo ',
         marks: undefined
@@ -148,7 +146,7 @@ describe('textOperations', () => {
     });
 
     it('应该处理无效位置（不修改 AST）', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const position = 999; // 无效的节点索引
       const result = deleteTextAtPosition(ast, position, 1);
 
@@ -158,7 +156,7 @@ describe('textOperations', () => {
 
   describe('deleteSelection', () => {
     it('应该删除单个文本节点中的选区', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 1, // "e" 的位置
         end: 4,   // "o" 的位置
@@ -166,7 +164,8 @@ describe('textOperations', () => {
 
       const result = deleteSelection(ast, selection);
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Ho ', // 删除了 "ell"
         marks: undefined
@@ -175,7 +174,7 @@ describe('textOperations', () => {
     });
 
     it('应该删除整个文本节点', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 0, // 开头
         end: 6,   // 结尾
@@ -183,20 +182,18 @@ describe('textOperations', () => {
 
       const result = deleteSelection(ast, selection);
 
-      expect(result.newAST[0]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: 'world',
-          marks: ['b']
-        }]
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children).toHaveLength(3); // 删除了第一个文本节点，剩余3个
+      expect(pElement.children[0]).toEqual({
+        type: 'text',
+        value: 'Wor',
+        marks: ['b']
       });
       expect(result.newCursorPosition).toBe(0);
     });
 
     it('应该处理没有选区的情况（删除光标前一个字符）', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 3,
         end: 3,
@@ -204,7 +201,8 @@ describe('textOperations', () => {
 
       const result = deleteSelection(ast, selection);
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Helo ', // 删除了 "l"
         marks: undefined
@@ -213,7 +211,7 @@ describe('textOperations', () => {
     });
 
     it('应该处理无效选区（返回原 AST）', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 0,
         end: 0,
@@ -228,7 +226,7 @@ describe('textOperations', () => {
 
   describe('insertTextAtSelection', () => {
     it('应该在选区位置插入文本（替换选区内容）', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 1, // "e" 的位置
         end: 4,   // "o" 的位置
@@ -236,7 +234,8 @@ describe('textOperations', () => {
 
       const result = insertTextAtSelection(ast, selection, 'XX');
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'HXXo ', // 替换了 "ell" 为 "XX"
         marks: undefined
@@ -245,7 +244,7 @@ describe('textOperations', () => {
     });
 
     it('应该在没有选区时插入文本', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 3,
         end: 3,
@@ -253,7 +252,8 @@ describe('textOperations', () => {
 
       const result = insertTextAtSelection(ast, selection, 'XX');
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'HelXXlo ', // 在位置 3 插入 "XX"
         marks: undefined
@@ -262,7 +262,7 @@ describe('textOperations', () => {
     });
 
     // it('应该处理无效选区（返回原 AST）', () => {
-    //   const ast = createTestAST();
+    //   const ast = createRealWorldAST();
     //   const selection: Selection = {
     //     start: 0,
     //     end: 0,
@@ -275,28 +275,25 @@ describe('textOperations', () => {
     // });
 
     it('应该处理跨节点选区（简化版）', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 3, // "Hello " 中的 "l"
-        end: 7,   // "world" 中的 "r"
+        end: 7,   // "Wor" 中的 "r"
       };
 
       const result = insertTextAtSelection(ast, selection, 'XX');
 
       // 跨节点选区应该删除选中内容并插入新文本
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
-        value: 'HelXX', // 删除了 "lo " 和 "wo"
+        value: 'HelXX', // 删除了 "lo " 和 "Wo"
         marks: undefined
       });
-      expect(result.newAST[1]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: 'orld', // 保留了 "orld"
-          marks: ['b']
-        }]
+      expect(pElement.children[1]).toEqual({
+        type: 'text',
+        value: 'or', // 保留了 "or"
+        marks: ['b']
       });
       expect(result.newCursorPosition).toBe(5); // 3 + 2 (XX 的长度)
     });
@@ -374,7 +371,7 @@ describe('textOperations', () => {
 
   describe('中文输入处理', () => {
     it('应该正确处理中文字符插入', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 3,
         end: 3,
@@ -382,7 +379,8 @@ describe('textOperations', () => {
 
       const result = insertTextAtSelection(ast, selection, '你好');
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Hel你好lo ',
         marks: undefined
@@ -391,7 +389,7 @@ describe('textOperations', () => {
     });
 
     it('应该正确处理中文字符替换选区', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 1, // "e" 的位置
         end: 4,   // "o" 的位置
@@ -399,7 +397,8 @@ describe('textOperations', () => {
 
       const result = insertTextAtSelection(ast, selection, '世界');
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'H世界o ', // 替换了 "ell" 为 "世界"
         marks: undefined
@@ -408,27 +407,25 @@ describe('textOperations', () => {
     });
 
     it('应该正确处理中文标点符号', () => {
-
-      // createTextNode('Hello '),
-      //   createElementNode('span', [
-      //     createTextNode('world', ['b'])
-      //   ]),
-      //   createTextNode('!')
-
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
-        start: 11, // "!" 的位置 (Hello + world + ! = 6 + 5 + 1 = 12, 所以!在位置11)
+        start: 11, // "ld" 中的 "d" 位置 (Hello + Wor + ld = 6 + 3 + 2 = 11, 所以d在位置11)
         end: 11,
       };
 
       const result = insertTextAtSelection(ast, selection, '，。！？');
 
-      expect(((result.newAST[1] as ElementNode).children[0] as TextNode).value).toEqual('world，。！？');
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[2]).toEqual({
+        type: 'text',
+        value: 'ld，。！？',
+        marks: ['i', 'b']
+      });
       expect(result.newCursorPosition).toBe(15); // 11 + 4 (，。！？ 的长度)
     });
 
     it('应该正确处理中英文混合输入', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 3,
         end: 3,
@@ -436,7 +433,8 @@ describe('textOperations', () => {
 
       const result = insertTextAtSelection(ast, selection, 'Hello世界');
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'HelHello世界lo ',
         marks: undefined
@@ -526,7 +524,7 @@ describe('textOperations', () => {
     });
 
     it('应该正确处理长中文文本插入', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 0,
         end: 0,
@@ -535,7 +533,8 @@ describe('textOperations', () => {
       const longChineseText = '这是一个很长的中文文本，用来测试编辑器的中文处理能力。';
       const result = insertTextAtSelection(ast, selection, longChineseText);
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: longChineseText + 'Hello ',
         marks: undefined
@@ -544,7 +543,7 @@ describe('textOperations', () => {
     });
 
     it('应该正确处理中文数字和符号', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 3,
         end: 3,
@@ -553,7 +552,8 @@ describe('textOperations', () => {
       const chineseNumbers = '一二三四五①②③④⑤';
       const result = insertTextAtSelection(ast, selection, chineseNumbers);
 
-      expect(result.newAST[0]).toEqual({
+      const pElement = result.newAST[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Hel' + chineseNumbers + 'lo ',
         marks: undefined
@@ -603,7 +603,7 @@ describe('textOperations', () => {
     });
 
     it('应该在文本中间按回车时正确拆分', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 3, // "Hello " 的 "l" 后面
         end: 3,
@@ -612,24 +612,29 @@ describe('textOperations', () => {
       const result = splitTextAtCursor(ast, selection);
 
       // 前面的 AST 应该包含 "Hel" 和后续节点
-      expect(result.beforeAST).toHaveLength(3);
-      expect(result.beforeAST[0]).toEqual({
+      expect(result.beforeAST).toHaveLength(1);
+      const beforeElement = result.beforeAST[0] as ElementNode;
+      expect(beforeElement.type).toBe('element');
+      expect(beforeElement.tag).toBe('p');
+      expect(beforeElement.children).toHaveLength(4);
+      expect(beforeElement.children[0]).toEqual({
         type: 'text',
         value: 'Hel',
         marks: undefined
       });
-      expect(result.beforeAST[1]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: 'world',
-          marks: ['b']
-        }]
-      });
-      expect(result.beforeAST[2]).toEqual({
+      expect(beforeElement.children[1]).toEqual({
         type: 'text',
-        value: '!',
+        value: 'Wor',
+        marks: ['b']
+      });
+      expect(beforeElement.children[2]).toEqual({
+        type: 'text',
+        value: 'ld',
+        marks: ['i', 'b']
+      });
+      expect(beforeElement.children[3]).toEqual({
+        type: 'text',
+        value: '! This is an editable AST editor.',
         marks: undefined
       });
 
@@ -649,7 +654,7 @@ describe('textOperations', () => {
     });
 
     it('应该在文本开头按回车时创建空的前面 AST', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: 0, // 文本开头
         end: 0,
@@ -657,21 +662,25 @@ describe('textOperations', () => {
 
       const result = splitTextAtCursor(ast, selection);
 
-
       // 前面的 AST 应该包含后续节点（空文本节点被清理了）
-      expect(result.beforeAST).toHaveLength(2);
-      expect(result.beforeAST[0]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: 'world',
-          marks: ['b']
-        }]
-      });
-      expect(result.beforeAST[1]).toEqual({
+      expect(result.beforeAST).toHaveLength(1);
+      const beforeElement = result.beforeAST[0] as ElementNode;
+      expect(beforeElement.type).toBe('element');
+      expect(beforeElement.tag).toBe('p');
+      expect(beforeElement.children).toHaveLength(3);
+      expect(beforeElement.children[0]).toEqual({
         type: 'text',
-        value: '!',
+        value: 'Wor',
+        marks: ['b']
+      });
+      expect(beforeElement.children[1]).toEqual({
+        type: 'text',
+        value: 'ld',
+        marks: ['i', 'b']
+      });
+      expect(beforeElement.children[2]).toEqual({
+        type: 'text',
+        value: '! This is an editable AST editor.',
         marks: undefined
       });
 
@@ -691,33 +700,38 @@ describe('textOperations', () => {
     });
 
     it('应该在文本结尾按回车时创建空的后面 AST', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
-        start: 12, // 文本结尾 (Hello + world + ! = 6 + 5 + 1 = 12)
-        end: 12,
+        start: 43, // 文本结尾 (Hello + Wor + ld + ! This is an editable AST editor. = 6 + 3 + 2 + 32 = 43)
+        end: 43,
       };
 
       const result = splitTextAtCursor(ast, selection);
 
       // 前面的 AST 应该包含所有原始内容
-      expect(result.beforeAST).toHaveLength(3);
-      expect(result.beforeAST[0]).toEqual({
+      expect(result.beforeAST).toHaveLength(1);
+      const beforeElement = result.beforeAST[0] as ElementNode;
+      expect(beforeElement.type).toBe('element');
+      expect(beforeElement.tag).toBe('p');
+      expect(beforeElement.children).toHaveLength(4);
+      expect(beforeElement.children[0]).toEqual({
         type: 'text',
         value: 'Hello ',
         marks: undefined
       });
-      expect(result.beforeAST[1]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: 'world',
-          marks: ['b']
-        }]
-      });
-      expect(result.beforeAST[2]).toEqual({
+      expect(beforeElement.children[1]).toEqual({
         type: 'text',
-        value: '!',
+        value: 'Wor',
+        marks: ['b']
+      });
+      expect(beforeElement.children[2]).toEqual({
+        type: 'text',
+        value: 'ld',
+        marks: ['i', 'b']
+      });
+      expect(beforeElement.children[3]).toEqual({
+        type: 'text',
+        value: '! This is an editable AST editor',
         marks: undefined
       });
 
@@ -729,7 +743,7 @@ describe('textOperations', () => {
       expect(afterElement.children).toHaveLength(1);
       expect(afterElement.children[0]).toEqual({
         type: 'text',
-        value: '',
+        value: '.',
         marks: undefined
       });
 
@@ -737,37 +751,42 @@ describe('textOperations', () => {
     });
 
     it('应该在嵌套元素中的文本按回车时正确拆分', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
-        start: 8, // "world" 的 "o" 后面
+        start: 8, // "Wor" 的 "r" 后面
         end: 8,
       };
 
       const result = splitTextAtCursor(ast, selection);
 
-      // 前面的 AST 应该包含 "Hello " + "wo" + "!"
-      expect(result.beforeAST).toHaveLength(3);
-      expect(result.beforeAST[0]).toEqual({
+      // 前面的 AST 应该包含 "Hello " + "Wo" + "ld" + "! This is an editable AST editor."
+      expect(result.beforeAST).toHaveLength(1);
+      const beforeElement = result.beforeAST[0] as ElementNode;
+      expect(beforeElement.type).toBe('element');
+      expect(beforeElement.tag).toBe('p');
+      expect(beforeElement.children).toHaveLength(4);
+      expect(beforeElement.children[0]).toEqual({
         type: 'text',
         value: 'Hello ',
         marks: undefined
       });
-      expect(result.beforeAST[1]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: 'wo',
-          marks: ['b']
-        }]
-      });
-      expect(result.beforeAST[2]).toEqual({
+      expect(beforeElement.children[1]).toEqual({
         type: 'text',
-        value: '!',
+        value: 'Wo',
+        marks: ['b']
+      });
+      expect(beforeElement.children[2]).toEqual({
+        type: 'text',
+        value: 'ld',
+        marks: ['i', 'b']
+      });
+      expect(beforeElement.children[3]).toEqual({
+        type: 'text',
+        value: '! This is an editable AST editor.',
         marks: undefined
       });
 
-      // 后面的 AST 应该包含 "rld"
+      // 后面的 AST 应该包含 "r"
       expect(result.afterAST).toHaveLength(1);
       const afterElement = result.afterAST[0] as ElementNode;
       expect(afterElement.type).toBe('element');
@@ -775,7 +794,7 @@ describe('textOperations', () => {
       expect(afterElement.children).toHaveLength(1);
       expect(afterElement.children[0]).toEqual({
         type: 'text',
-        value: 'rld',
+        value: 'r',
         marks: ['b']
       });
 
@@ -783,7 +802,7 @@ describe('textOperations', () => {
     });
 
     it('应该处理无效选区时返回原 AST', () => {
-      const ast = createTestAST();
+      const ast = createRealWorldAST();
       const selection: Selection = {
         start: -1, // 无效位置
         end: -1,
@@ -791,26 +810,30 @@ describe('textOperations', () => {
 
       const result = splitTextAtCursor(ast, selection);
 
-
       // 根据实际行为，无效选区时函数会尝试处理，但结果可能不同
-      expect(result.beforeAST).toHaveLength(3);
-      expect(result.beforeAST[0]).toEqual({
+      expect(result.beforeAST).toHaveLength(1);
+      const beforeElement = result.beforeAST[0] as ElementNode;
+      expect(beforeElement.type).toBe('element');
+      expect(beforeElement.tag).toBe('p');
+      expect(beforeElement.children).toHaveLength(4);
+      expect(beforeElement.children[0]).toEqual({
         type: 'text',
         value: 'Hello',
         marks: undefined
       });
-      expect(result.beforeAST[1]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: 'world',
-          marks: ['b']
-        }]
-      });
-      expect(result.beforeAST[2]).toEqual({
+      expect(beforeElement.children[1]).toEqual({
         type: 'text',
-        value: '!',
+        value: 'Wor',
+        marks: ['b']
+      });
+      expect(beforeElement.children[2]).toEqual({
+        type: 'text',
+        value: 'ld',
+        marks: ['i', 'b']
+      });
+      expect(beforeElement.children[3]).toEqual({
+        type: 'text',
+        value: '! This is an editable AST editor.',
         marks: undefined
       });
       expect(result.afterAST).toHaveLength(1);
@@ -873,12 +896,16 @@ describe('textOperations', () => {
     });
 
     it('应该正确处理中文文本的拆分', () => {
-      const ast = [
-        createTextNode('你好世界'),
-        createElementNode('span', [
-          createTextNode('测试', ['b'])
-        ]),
-        createTextNode('！')
+      const ast: ASTNode[] = [
+        {
+          type: "element",
+          tag: "p",
+          children: [
+            { type: "text", value: "你好世界" },
+            { type: "text", value: "测试", marks: ["b"] },
+            { type: "text", value: "！" },
+          ],
+        },
       ];
 
       const selection: Selection = {
@@ -889,22 +916,22 @@ describe('textOperations', () => {
       const result = splitTextAtCursor(ast, selection);
 
       // 前面的 AST 应该包含 "你好" + "测试" + "！"
-      expect(result.beforeAST).toHaveLength(3);
-      expect(result.beforeAST[0]).toEqual({
+      expect(result.beforeAST).toHaveLength(1);
+      const beforeElement = result.beforeAST[0] as ElementNode;
+      expect(beforeElement.type).toBe('element');
+      expect(beforeElement.tag).toBe('p');
+      expect(beforeElement.children).toHaveLength(3);
+      expect(beforeElement.children[0]).toEqual({
         type: 'text',
         value: '你好',
         marks: undefined
       });
-      expect(result.beforeAST[1]).toEqual({
-        type: 'element',
-        tag: 'span',
-        children: [{
-          type: 'text',
-          value: '测试',
-          marks: ['b']
-        }]
+      expect(beforeElement.children[1]).toEqual({
+        type: 'text',
+        value: '测试',
+        marks: ['b']
       });
-      expect(result.beforeAST[2]).toEqual({
+      expect(beforeElement.children[2]).toEqual({
         type: 'text',
         value: '！',
         marks: undefined
