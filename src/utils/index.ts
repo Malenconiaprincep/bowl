@@ -12,3 +12,6 @@ export * from './textOperations';
 
 // 格式化操作
 export * from './formatting';
+
+// Block 管理
+export * from './blockManager';

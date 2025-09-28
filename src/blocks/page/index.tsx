@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { Block } from '../../types/blocks'
 import type { ASTNode } from '../../types/ast'
-import BlockContainer from '../../components/BlockContainer'
+import BlockComponent from '../../components/BlockComponent'
 
 interface PageBlockProps {
   initialBlocks: Block[]
@@ -24,20 +24,20 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
     setBlocks(prevBlocks => {
       const newBlocks = [...prevBlocks]
       if (newBlocks[blockIndex] && newBlocks[blockIndex].type === 'paragraph') {
-        newBlocks[blockIndex] = {
+        const updatedBlock = {
           ...newBlocks[blockIndex],
           content: newContent
-        }
+        };
+        newBlocks[blockIndex] = updatedBlock;
       }
       return newBlocks
     })
   }, [])
 
-
   return (
     <div>
       {blocks.map((block, index) => (
-        <BlockContainer
+        <BlockComponent
           key={index}
           block={block}
           blockIndex={index}

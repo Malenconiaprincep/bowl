@@ -22,5 +22,5 @@ export type TextBlock = ParagraphBlock | HeadingBlock;
 export type Blocks = MediaBlock | TextBlock;
 
 export type Block = Blocks & {
-  id?: string;
+  id: string; // 改为必需的 id
 };
