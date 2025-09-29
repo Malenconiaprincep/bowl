@@ -19,6 +19,7 @@ export interface BlockComponentMethods {
   focus: () => void;
   blur: () => void;
   getElement: () => HTMLElement | null;
+  setSelection?: (selection: { start: number; end: number }) => void;
 }
 
 /**

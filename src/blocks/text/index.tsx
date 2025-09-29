@@ -15,7 +15,7 @@ interface TextBlockProps {
 
 interface TextMethods extends BlockComponentMethods {
   // TODO: 后面扩展方法
-  setSelection: (selection: Selection) => void;
+  setSelection: (selection: { start: number; end: number }) => void;
 }
 
 const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
@@ -37,8 +37,8 @@ const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
     getElement: () => {
       return astEditorRef.current?.getElement() || null;
     },
-    setSelection: (selection: Selection) => {
-      console.log('未实现 setSelection 方法', selection)
+    setSelection: (selection: { start: number; end: number }) => {
+      astEditorRef.current?.setSelection?.(selection);
     }
   }));
 

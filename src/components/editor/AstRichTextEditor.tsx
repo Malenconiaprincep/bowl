@@ -50,23 +50,6 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
 }, ref) => {
   const [ast, setAst] = useState<ASTNode[]>(initialAST);
 
-  // 暴露聚焦方法
-  useImperativeHandle(ref, () => ({
-    focus: () => {
-      if (editorRef.current) {
-        editorRef.current.focus();
-      }
-    },
-    blur: () => {
-      if (editorRef.current) {
-        editorRef.current.blur();
-      }
-    },
-    getElement: () => {
-      return editorRef.current;
-    }
-  }));
-
   // 使用光标位置管理 hook
   const {
     selection,
@@ -84,6 +67,35 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
     handleCompositionEnd,
     isComposing
   } = useCursorPosition(ast);
+
+  // 暴露聚焦方法
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      if (editorRef.current) {
+        editorRef.current.focus();
+      }
+    },
+    blur: () => {
+      if (editorRef.current) {
+        editorRef.current.blur();
+      }
+    },
+    getElement: () => {
+      return editorRef.current;
+    },
+    setSelection: (selection: { start: number; end: number }) => {
+      // 先更新状态
+      setSelection(selection);
+      // 然后立即应用到 DOM
+      if (selection.start === selection.end) {
+        // 如果是光标位置，使用 restoreCursorPosition
+        restoreCursorPosition(selection);
+      } else {
+        // 如果是选区，使用 restoreSelection
+        restoreSelection(selection);
+      }
+    }
+  }));
 
   // 更新 AST 并触发回调
   const updateAST = useCallback((newAST: ASTNode[]) => {
