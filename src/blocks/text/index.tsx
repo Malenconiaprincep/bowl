@@ -13,7 +13,7 @@ interface TextBlockProps {
   onUpdateBlock?: (blockIndex: number, newContent: ASTNode[]) => void;
 }
 
-interface TextMethods extends BlockComponentMethods {
+export interface TextMethods extends BlockComponentMethods {
   // TODO: 后面扩展方法
   setSelection: (selection: { start: number; end: number }) => void;
 }
@@ -24,7 +24,7 @@ const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
   onInsertBlock,
   onUpdateBlock
 }, ref) => {
-  const astEditorRef = useRef<BlockComponentMethods>(null);
+  const astEditorRef = useRef<TextMethods>(null);
 
   // 暴露聚焦方法，直接转发到 ASTEditor
   useImperativeHandle(ref, () => ({
