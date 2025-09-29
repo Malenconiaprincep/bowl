@@ -19,26 +19,18 @@ function TextBlockComponent({
   onInsertBlock,
   onUpdateBlock
 }: TextBlockProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
+  const astEditorRef = useRef<BlockComponentMethods>(null);
 
-  // 暴露聚焦方法
+  // 暴露聚焦方法，直接转发到 ASTEditor
   useImperativeHandle(useRef<BlockComponentMethods>(null), () => ({
     focus: () => {
-      // 聚焦到编辑器
-      const editor = editorRef.current?.querySelector('[contenteditable]') as HTMLElement;
-      if (editor) {
-        editor.focus();
-      }
+      astEditorRef.current?.focus();
     },
     blur: () => {
-      // 失焦
-      const editor = editorRef.current?.querySelector('[contenteditable]') as HTMLElement;
-      if (editor) {
-        editor.blur();
-      }
+      astEditorRef.current?.blur();
     },
     getElement: () => {
-      return editorRef.current;
+      return astEditorRef.current?.getElement() || null;
     }
   }));
 
@@ -47,8 +39,9 @@ function TextBlockComponent({
   };
 
   return (
-    <div ref={editorRef}>
+    <div>
       <ASTEditor
+        ref={astEditorRef}
         initialAST={block.content}
         onChange={handleASTChange}
         blockIndex={blockIndex}

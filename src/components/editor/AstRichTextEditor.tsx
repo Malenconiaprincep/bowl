@@ -1,6 +1,7 @@
-import { useState, useCallback, useLayoutEffect } from "react";
+import { useState, useCallback, useLayoutEffect, forwardRef, useImperativeHandle } from "react";
 import type { ASTNode } from "../../types/ast";
 import type { Block } from "../../types/blocks";
+import type { BlockComponentMethods } from "../../types/blockComponent";
 import { useCursorPosition } from "../../hooks/useCursorPosition";
 import { useTextInput } from "../../hooks/useTextInput";
 // import { AstEditorToolbar } from "./AstEditorToolbar";
@@ -36,18 +37,35 @@ function renderNode(node: ASTNode, key: number): React.ReactNode {
   return null;
 }
 
-export default function ASTEditor({
-  initialAST,
-  onChange,
-  blockIndex,
-  onInsertBlock
-}: {
+const ASTEditor = forwardRef<BlockComponentMethods, {
   initialAST: ASTNode[];
   onChange?: (ast: ASTNode[]) => void;
   blockIndex?: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
-}) {
+}>(({
+  initialAST,
+  onChange,
+  blockIndex,
+  onInsertBlock
+}, ref) => {
   const [ast, setAst] = useState<ASTNode[]>(initialAST);
+
+  // 暴露聚焦方法
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      if (editorRef.current) {
+        editorRef.current.focus();
+      }
+    },
+    blur: () => {
+      if (editorRef.current) {
+        editorRef.current.blur();
+      }
+    },
+    getElement: () => {
+      return editorRef.current;
+    }
+  }));
 
   // 使用光标位置管理 hook
   const {
@@ -135,4 +153,8 @@ export default function ASTEditor({
       </div> */}
     </div>
   );
-}
+});
+
+ASTEditor.displayName = 'ASTEditor';
+
+export default ASTEditor;
