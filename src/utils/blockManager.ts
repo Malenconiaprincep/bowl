@@ -17,19 +17,11 @@ export class BlockManager {
   private blocks: Map<string, BlockInstance> = new Map();
 
   /**
-   * 注册 block 实例
-   * @param blockId - block 的唯一标识符
-   * @param block - block 数据
-   * @param element - 可选的 DOM 元素引用
-   * @param component - 可选的 React 组件
+   * 直接注册 BlockInstance
+   * @param blockInstance - 完整的 block 实例
    */
-  registerBlock(
-    blockId: string,
-    block: Block,
-    element?: HTMLElement,
-    component?: React.ComponentType<Record<string, unknown>>
-  ): void {
-    this.blocks.set(blockId, { id: blockId, block, element, component });
+  registerBlockInstance(blockInstance: BlockInstance): void {
+    this.blocks.set(blockInstance.id, blockInstance);
   }
 
   /**

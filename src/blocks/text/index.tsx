@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef } from 'react';
+import { useImperativeHandle, useRef, forwardRef } from 'react';
 import type { TextBlock } from '../../types/blocks';
 import type { ASTNode } from '../../types/ast';
 import type { Block } from '../../types/blocks';
@@ -13,16 +13,21 @@ interface TextBlockProps {
   onUpdateBlock?: (blockIndex: number, newContent: ASTNode[]) => void;
 }
 
-function TextBlockComponent({
+interface TextMethods extends BlockComponentMethods {
+  // TODO: 后面扩展方法
+  setSelection: (selection: Selection) => void;
+}
+
+const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
   block,
   blockIndex,
   onInsertBlock,
   onUpdateBlock
-}: TextBlockProps) {
+}, ref) => {
   const astEditorRef = useRef<BlockComponentMethods>(null);
 
   // 暴露聚焦方法，直接转发到 ASTEditor
-  useImperativeHandle(useRef<BlockComponentMethods>(null), () => ({
+  useImperativeHandle(ref, () => ({
     focus: () => {
       astEditorRef.current?.focus();
     },
@@ -31,6 +36,9 @@ function TextBlockComponent({
     },
     getElement: () => {
       return astEditorRef.current?.getElement() || null;
+    },
+    setSelection: (selection: Selection) => {
+      console.log('未实现 setSelection 方法', selection)
     }
   }));
 
@@ -49,7 +57,7 @@ function TextBlockComponent({
       />
     </div>
   );
-}
+});
 
 // 使用高阶组件包裹 TextBlock
 const TextBlock = BlockWrapper(TextBlockComponent);

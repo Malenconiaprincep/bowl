@@ -3,6 +3,7 @@ import type { ASTNode } from "../types/ast";
 import type { Block } from "../types/blocks";
 import type { Selection } from "../utils";
 import { insertTextAtSelection, deleteSelection, splitTextAtCursor } from "../utils";
+import { v4 as uuidv4 } from 'uuid';
 
 export function useTextInput(
   ast: ASTNode[],
@@ -110,7 +111,8 @@ export function useTextInput(
         if (afterAST.length > 0 && blockIndex !== undefined && onInsertBlock) {
           const newBlock: Block = {
             type: "paragraph",
-            content: afterAST
+            content: afterAST,
+            id: uuidv4()
           };
           onInsertBlock(blockIndex, newBlock);
         }

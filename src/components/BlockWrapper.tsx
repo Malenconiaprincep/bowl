@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { blockManager } from '../utils/blockManager';
+import { blockManager, type BlockInstance } from '../utils/blockManager';
 import type { Block } from '../types/blocks';
 import type { BlockComponentMethods } from '../types/blockComponent';
 
@@ -11,42 +11,26 @@ import type { BlockComponentMethods } from '../types/blockComponent';
 export function BlockWrapper<P extends object>(
   WrappedComponent: React.ComponentType<P>
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const BlockWrapperComponent = React.forwardRef<BlockComponentMethods, P & { block: Block }>((props, ref) => {
     const elementRef = useRef<HTMLDivElement>(null);
     const componentRef = useRef<BlockComponentMethods>(null);
-
-    // 暴露聚焦方法给父组件
-    React.useImperativeHandle(ref, () => ({
-      focus: () => {
-        componentRef.current?.focus();
-      },
-      blur: () => {
-        componentRef.current?.blur();
-      },
-      getElement: () => {
-        return elementRef.current;
-      }
-    }));
 
     // 自动注册 block 到 BlockManager
     useEffect(() => {
       const { block } = props;
 
-      if (block.id && elementRef.current) {
-        // 创建一个包装的组件，包含聚焦方法
-        const BlockComponentWithMethods = {
-          focus: () => componentRef.current?.focus(),
-          blur: () => componentRef.current?.blur(),
-          getElement: () => elementRef.current
-        } as unknown as React.ComponentType<Record<string, unknown>>;
+      if (block.id && elementRef.current && componentRef.current) {
+        // 创建 BlockInstance 对象
+        const blockInstance: BlockInstance = {
+          id: block.id,
+          block: block,
+          element: elementRef.current,
+          component: componentRef.current as unknown as React.ComponentType<Record<string, unknown>>
+        };
 
-        // 注册或更新 block，传递包装后的组件引用
-        blockManager.registerBlock(
-          block.id,
-          block,
-          elementRef.current,
-          BlockComponentWithMethods
-        );
+        // 注册 block 实例
+        blockManager.registerBlockInstance(blockInstance);
       }
 
       // 清理函数：组件卸载时移除 block
@@ -61,6 +45,7 @@ export function BlockWrapper<P extends object>(
       <div ref={elementRef} data-block-id={props.block.id}>
         <WrappedComponent
           {...(props as P)}
+          ref={componentRef}
         />
       </div>
     );

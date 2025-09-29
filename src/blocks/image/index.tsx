@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef, useState } from 'react';
+import { useImperativeHandle, useRef, useState, forwardRef } from 'react';
 import type { MediaBlock } from '../../types/blocks';
 import type { BlockComponentMethods } from '../../types/blockComponent';
 import { BlockWrapper } from '../../components/BlockWrapper';
@@ -8,14 +8,14 @@ interface ImageBlockProps {
   blockIndex: number;
 }
 
-function ImageBlockComponent({
+const ImageBlockComponent = forwardRef<BlockComponentMethods, ImageBlockProps>(({
   block,
-}: ImageBlockProps) {
+}, ref) => {
   const imageRef = useRef<HTMLImageElement>(null);
   const [isSelected, setIsSelected] = useState(false);
 
   // 暴露聚焦方法
-  useImperativeHandle(useRef<BlockComponentMethods>(null), () => ({
+  useImperativeHandle(ref, () => ({
     focus: () => {
       // 聚焦到图片元素
       if (imageRef.current) {
@@ -81,7 +81,7 @@ function ImageBlockComponent({
       )}
     </div>
   );
-}
+});
 
 // 使用高阶组件包裹 ImageBlock
 const ImageBlock = BlockWrapper(ImageBlockComponent);
