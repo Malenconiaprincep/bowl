@@ -388,31 +388,111 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
       }
     }
   } else {
-    // 光标在节点中间，只处理当前节点
-    if (after !== '') {
-      const afterTextNode: ASTNode = {
-        type: "text",
-        value: after,
-        marks: targetNode.marks ? [...targetNode.marks] : undefined
-      };
+    // 光标在节点中间，需要将当前节点的后半部分和后续所有节点移到 afterAST
+    const originalAST = cloneAST(ast);
 
-      afterAST = [{
-        type: "element",
-        tag: "p",
-        children: [afterTextNode]
-      }];
+    // 找到目标节点在段落中的位置
+    let foundParagraph = false;
+    let paragraphIndex = -1;
+
+    for (let i = 0; i < originalAST.length; i++) {
+      const node = originalAST[i];
+      if (node.type === 'element' && node.tag === 'p') {
+        foundParagraph = true;
+        paragraphIndex = i;
+        break;
+      }
+    }
+
+    if (foundParagraph && paragraphIndex >= 0) {
+      const paragraph = originalAST[paragraphIndex] as { type: 'element'; tag: string; children: ASTNode[] };
+      const paragraphChildren = paragraph.children;
+
+      // 找到目标节点在段落中的位置
+      let targetChildIndex = -1;
+      for (let i = 0; i < paragraphChildren.length; i++) {
+        const child = paragraphChildren[i];
+        if (child.type === 'text' && child.value === targetNode.value) {
+          targetChildIndex = i;
+          break;
+        }
+      }
+
+      if (targetChildIndex >= 0) {
+        // 创建 beforeAST - 只包含当前段落，但截断目标节点
+        const beforeParagraph = cloneAST([paragraph] as unknown as ASTNode[])[0] as { type: 'element'; tag: string; children: ASTNode[] };
+        beforeParagraph.children = paragraphChildren.slice(0, targetChildIndex + 1);
+        if (beforeParagraph.children[targetChildIndex]) {
+          beforeParagraph.children[targetChildIndex] = {
+            type: 'text',
+            value: before,
+            marks: targetNode.marks ? [...targetNode.marks] : undefined
+          };
+        }
+
+        // 创建 afterAST - 包含目标节点后半部分和后续所有节点
+        const afterChildren = [];
+
+        // 添加目标节点的后半部分（如果有内容）
+        if (after !== '') {
+          afterChildren.push({
+            type: 'text',
+            value: after,
+            marks: targetNode.marks ? [...targetNode.marks] : undefined
+          });
+        }
+
+        // 添加目标节点之后的所有节点
+        afterChildren.push(...paragraphChildren.slice(targetChildIndex + 1));
+
+        if (afterChildren.length > 0) {
+          afterAST = [{
+            type: "element",
+            tag: "p",
+            children: afterChildren
+          }];
+        } else {
+          afterAST = [{
+            type: "element",
+            tag: "p",
+            children: [{
+              type: "text",
+              value: "",
+              marks: targetNode.marks ? [...targetNode.marks] : undefined
+            }]
+          }];
+        }
+
+        // 更新 beforeAST
+        beforeAST[paragraphIndex] = beforeParagraph as unknown as ASTNode;
+      }
     } else {
-      const emptyTextNode: ASTNode = {
-        type: "text",
-        value: "",
-        marks: targetNode.marks ? [...targetNode.marks] : undefined
-      };
+      // 处理扁平结构的情况
+      if (after !== '') {
+        const afterTextNode: ASTNode = {
+          type: "text",
+          value: after,
+          marks: targetNode.marks ? [...targetNode.marks] : undefined
+        };
 
-      afterAST = [{
-        type: "element",
-        tag: "p",
-        children: [emptyTextNode]
-      }];
+        afterAST = [{
+          type: "element",
+          tag: "p",
+          children: [afterTextNode]
+        }];
+      } else {
+        const emptyTextNode: ASTNode = {
+          type: "text",
+          value: "",
+          marks: targetNode.marks ? [...targetNode.marks] : undefined
+        };
+
+        afterAST = [{
+          type: "element",
+          tag: "p",
+          children: [emptyTextNode]
+        }];
+      }
     }
   }
 
