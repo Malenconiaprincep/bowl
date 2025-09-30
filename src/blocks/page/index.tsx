@@ -4,6 +4,7 @@ import type { ASTNode } from '../../types/ast'
 import BlockComponent from '../../components/BlockComponent'
 import { blockManager } from '../../utils/blockManager'
 import { mergeASTContent } from '../../utils/textOperations'
+import { calculateTextLength, findPreviousTextBlock, isTextBlock } from '../../utils/blockUtils'
 import type { TextMethods } from '../text'
 
 interface PageBlockProps {
@@ -13,18 +14,6 @@ interface PageBlockProps {
 export default function PageBlock({ initialBlocks }: PageBlockProps) {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks)
 
-  // 计算AST中文本长度的辅助函数
-  const calculateTextLength = useCallback((ast: ASTNode[]): number => {
-    let length = 0
-    for (const node of ast) {
-      if (node.type === 'text') {
-        length += node.value.length
-      } else if (node.type === 'element') {
-        length += calculateTextLength(node.children)
-      }
-    }
-    return length
-  }, [])
 
   // 聚焦到指定 block 的辅助函数
   const focusBlock = useCallback((blockId: string) => {
@@ -39,17 +28,17 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
   // 聚焦到指定 block 末尾的辅助函数
   const focusBlockAtEnd = useCallback((blockIndex: number) => {
     const block = blocks[blockIndex]
-    if (block && (block.type === 'paragraph' || block.type === 'heading')) {
+    if (block && isTextBlock(block)) {
       const blockInstance = blockManager.getBlock(block.id)
       if (blockInstance?.component) {
         const component = blockInstance.component as unknown as TextMethods
         component.focus?.()
         // 计算文本长度并设置光标到末尾
-        const textLength = calculateTextLength(block.content)
+        const textLength = calculateTextLength(block.content as ASTNode[])
         component.setSelection?.({ start: textLength, end: textLength })
       }
     }
-  }, [blocks, calculateTextLength])
+  }, [blocks])
 
   // 插入新块的方法
   const insertBlock = useCallback((blockIndex: number, newBlock: Block) => {
@@ -69,11 +58,11 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
   const updateBlock = useCallback((blockIndex: number, newContent: ASTNode[]) => {
     setBlocks(prevBlocks => {
       const newBlocks = [...prevBlocks]
-      if (newBlocks[blockIndex] && newBlocks[blockIndex].type === 'paragraph') {
+      if (newBlocks[blockIndex] && isTextBlock(newBlocks[blockIndex])) {
         const updatedBlock = {
           ...newBlocks[blockIndex],
           content: newContent
-        };
+        } as Block;
         newBlocks[blockIndex] = updatedBlock;
       }
       return newBlocks
@@ -89,33 +78,11 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
     })
   }, [])
 
-  // 查找上一个textBlock的方法
-  const findPreviousTextBlock = useCallback((currentIndex: number) => {
-    for (let i = currentIndex - 1; i >= 0; i--) {
-      const block = blocks[i]
-      if (block && (block.type === 'paragraph' || block.type === 'heading')) {
-        return i
-      }
-    }
-    return -1
-  }, [blocks])
 
-  // 提取文本内容的辅助函数
-  const extractTextContent = useCallback((ast: ASTNode[]): string => {
-    let text = ''
-    for (const node of ast) {
-      if (node.type === 'text') {
-        text += node.value
-      } else if (node.type === 'element' && node.children) {
-        text += extractTextContent(node.children)
-      }
-    }
-    return text
-  }, [])
 
   // 合并当前block到上一个textBlock的方法
   const mergeWithPreviousBlock = useCallback((currentIndex: number, currentContent: ASTNode[]) => {
-    const previousIndex = findPreviousTextBlock(currentIndex)
+    const previousIndex = findPreviousTextBlock(blocks, currentIndex)
     if (previousIndex !== -1) {
       setBlocks(prevBlocks => {
         const newBlocks = [...prevBlocks]
@@ -123,17 +90,16 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
         const currentBlock = newBlocks[currentIndex]
 
         if (previousBlock && currentBlock &&
-          (previousBlock.type === 'paragraph' || previousBlock.type === 'heading') &&
-          (currentBlock.type === 'paragraph' || currentBlock.type === 'heading')) {
+          isTextBlock(previousBlock) && isTextBlock(currentBlock)) {
 
           // 使用mergeASTContent函数合并内容
-          const { mergedAST, newCursorPosition } = mergeASTContent(previousBlock.content, currentContent)
+          const { mergedAST, newCursorPosition } = mergeASTContent(previousBlock.content as ASTNode[], currentContent)
 
           // 使用合并后的AST更新上一个block
           newBlocks[previousIndex] = {
             ...previousBlock,
             content: mergedAST
-          }
+          } as Block
 
           // 删除当前block
           newBlocks.splice(currentIndex, 1)
@@ -155,7 +121,12 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
         return newBlocks
       })
     }
-  }, [findPreviousTextBlock])
+  }, [blocks])
+
+  // 包装 findPreviousTextBlock 以适配接口
+  const wrappedFindPreviousTextBlock = useCallback((currentIndex: number) => {
+    return findPreviousTextBlock(blocks, currentIndex)
+  }, [blocks])
 
   return (
     <div>
@@ -167,7 +138,7 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
           onInsertBlock={insertBlock}
           onUpdateBlock={updateBlock}
           onDeleteBlock={deleteBlock}
-          onFindPreviousTextBlock={findPreviousTextBlock}
+          onFindPreviousTextBlock={wrappedFindPreviousTextBlock}
           onFocusBlockAtEnd={focusBlockAtEnd}
           onMergeWithPreviousBlock={mergeWithPreviousBlock}
         />

@@ -15,3 +15,6 @@ export * from './formatting';
 
 // Block 管理
 export * from './blockManager';
+
+// Block 工具函数
+export * from './blockUtils';
