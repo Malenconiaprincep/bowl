@@ -17,6 +17,7 @@
   color: #333;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  white-space: pre-wrap; /* 保留空格和换行，但允许自动换行 */
 }
 
 .editor-content:empty:before {

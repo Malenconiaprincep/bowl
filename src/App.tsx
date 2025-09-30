@@ -13,9 +13,9 @@ function App() {
         type: "element",
         tag: "p",
         children: [
-          { type: "text", value: "Hello " },
-          { type: "text", value: "world", marks: ["b"] },
-          { type: "text", value: "! " },
+          { type: "text", value: "Hello        " },
+          // { type: "text", value: "world", marks: ["b"] },
+          // { type: "text", value: "! " },
         ],
       }],
     },
