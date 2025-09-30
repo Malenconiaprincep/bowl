@@ -56,28 +56,28 @@ function findTargetNodeInParagraph(paragraphChildren: ASTNode[], targetNode: Tex
 
 // 创建 beforeAST（段落结构）
 function createBeforeASTInParagraph(
-  originalAST: ASTNode[], 
-  paragraphIndex: number, 
-  targetNode: TextNode, 
+  originalAST: ASTNode[],
+  paragraphIndex: number,
+  targetNode: TextNode,
   beforeText: string
 ): ASTNode[] {
   const beforeAST = cloneAST(originalAST);
   const paragraph = originalAST[paragraphIndex] as { type: 'element'; tag: string; children: ASTNode[] };
   const paragraphChildren = paragraph.children;
-  
+
   const targetChildIndex = findTargetNodeInParagraph(paragraphChildren, targetNode);
-  
+
   if (targetChildIndex >= 0) {
     const beforeParagraph = cloneAST([paragraph] as unknown as ASTNode[])[0] as { type: 'element'; tag: string; children: ASTNode[] };
     beforeParagraph.children = paragraphChildren.slice(0, targetChildIndex + 1);
-    
+
     if (beforeParagraph.children[targetChildIndex]) {
       beforeParagraph.children[targetChildIndex] = createTextNode(beforeText, targetNode.marks);
     }
-    
+
     beforeAST[paragraphIndex] = beforeParagraph as unknown as ASTNode;
   }
-  
+
   return beforeAST;
 }
 
@@ -89,15 +89,15 @@ function createAfterASTInParagraph(
   afterText: string
 ): ASTNode[] {
   const afterChildren: ASTNode[] = [];
-  
+
   // 添加目标节点的后半部分（如果有内容）
   if (afterText !== '') {
     afterChildren.push(createTextNode(afterText, targetNode.marks));
   }
-  
+
   // 添加目标节点之后的所有节点
   afterChildren.push(...paragraphChildren.slice(targetChildIndex + 1));
-  
+
   if (afterChildren.length > 0) {
     return [createParagraphNode(afterChildren)];
   } else {
@@ -209,7 +209,8 @@ export function deleteTextAtPosition(ast: ASTNode[], position: number, length: n
     targetNode.value = before + after;
   }
 
-  return newAst;
+  // 清理空的节点
+  return cleanupEmptyNodes(newAst);
 }
 
 // 删除选区内容
@@ -257,10 +258,8 @@ export function deleteSelection(ast: ASTNode[], selection: Selection): { newAST:
   } else {
     // 没有选区时，删除光标前一个字符
     const fallbackResult = deleteTextAtPosition(ast, selection.start, 1);
-    // 也需要清理空的节点
-    const finalAst = cleanupEmptyNodes(fallbackResult);
     return {
-      newAST: finalAst,
+      newAST: fallbackResult,
       newCursorPosition: Math.max(0, selection.start - 1)
     };
   }
