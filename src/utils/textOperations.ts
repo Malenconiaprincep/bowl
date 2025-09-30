@@ -1,4 +1,4 @@
-import type { ASTNode } from "../types/ast";
+import type { ASTNode, Mark, TextNode } from "../types/ast";
 import { cloneAST, getTextNodes, getTargetTextNode, cleanupEmptyNodes } from "./core";
 import type { Selection } from "./selection";
 import { isValidSelection, findNodeAndOffsetBySelectionOffset, hasSelection } from "./selection";
@@ -14,6 +14,108 @@ function sliceText(text: string, startOffset: number, endOffset?: number): {
   const after = endOffset !== undefined ? text.slice(endOffset) : text.slice(startOffset);
 
   return { before, selected, after };
+}
+
+// 创建空文本节点
+function createEmptyTextNode(marks?: Mark[]): ASTNode {
+  return {
+    type: "text",
+    value: "",
+    marks: marks ? [...marks] : undefined
+  };
+}
+
+// 创建段落节点
+function createParagraphNode(children: ASTNode[]): ASTNode {
+  return {
+    type: "element",
+    tag: "p",
+    children
+  };
+}
+
+// 创建文本节点
+function createTextNode(value: string, marks?: Mark[]): ASTNode {
+  return {
+    type: "text",
+    value,
+    marks: marks ? [...marks] : undefined
+  };
+}
+
+// 在段落中查找目标节点的索引
+function findTargetNodeInParagraph(paragraphChildren: ASTNode[], targetNode: TextNode): number {
+  for (let i = 0; i < paragraphChildren.length; i++) {
+    const child = paragraphChildren[i];
+    if (child.type === 'text' && child.value === targetNode.value) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// 创建 beforeAST（段落结构）
+function createBeforeASTInParagraph(
+  originalAST: ASTNode[], 
+  paragraphIndex: number, 
+  targetNode: TextNode, 
+  beforeText: string
+): ASTNode[] {
+  const beforeAST = cloneAST(originalAST);
+  const paragraph = originalAST[paragraphIndex] as { type: 'element'; tag: string; children: ASTNode[] };
+  const paragraphChildren = paragraph.children;
+  
+  const targetChildIndex = findTargetNodeInParagraph(paragraphChildren, targetNode);
+  
+  if (targetChildIndex >= 0) {
+    const beforeParagraph = cloneAST([paragraph] as unknown as ASTNode[])[0] as { type: 'element'; tag: string; children: ASTNode[] };
+    beforeParagraph.children = paragraphChildren.slice(0, targetChildIndex + 1);
+    
+    if (beforeParagraph.children[targetChildIndex]) {
+      beforeParagraph.children[targetChildIndex] = createTextNode(beforeText, targetNode.marks);
+    }
+    
+    beforeAST[paragraphIndex] = beforeParagraph as unknown as ASTNode;
+  }
+  
+  return beforeAST;
+}
+
+// 创建 afterAST（段落结构）
+function createAfterASTInParagraph(
+  paragraphChildren: ASTNode[],
+  targetChildIndex: number,
+  targetNode: TextNode,
+  afterText: string
+): ASTNode[] {
+  const afterChildren: ASTNode[] = [];
+  
+  // 添加目标节点的后半部分（如果有内容）
+  if (afterText !== '') {
+    afterChildren.push(createTextNode(afterText, targetNode.marks));
+  }
+  
+  // 添加目标节点之后的所有节点
+  afterChildren.push(...paragraphChildren.slice(targetChildIndex + 1));
+  
+  if (afterChildren.length > 0) {
+    return [createParagraphNode(afterChildren)];
+  } else {
+    return [createParagraphNode([createEmptyTextNode(targetNode.marks)])];
+  }
+}
+
+// 创建 afterAST（扁平结构）
+function createAfterASTFlat(
+  targetNode: TextNode,
+  afterText: string
+): ASTNode[] {
+  if (afterText !== '') {
+    const afterTextNode = createTextNode(afterText, targetNode.marks);
+    return [createParagraphNode([afterTextNode])];
+  } else {
+    return [createParagraphNode([createEmptyTextNode(targetNode.marks)])];
+  }
 }
 
 // 处理跨节点选区删除和插入
@@ -242,56 +344,32 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
   // 检查偏移量是否有效
   if (!isValidSelection(selection, textNodes) || start < 0 || start > totalLength) {
     // 当偏移量无效时，根据偏移量更靠近起始点还是最终点来决定拆分行为
-    // 如果偏移量更靠近起始点（0），则所有内容都移到 afterAST
     if (start < 0 || Math.abs(start) < Math.abs(start - totalLength)) {
-      // 创建4个段落，第一个包含所有文本节点，其他为空
+      // 如果偏移量更靠近起始点（0），则所有内容都移到 afterAST
       const afterAST: ASTNode[] = [];
       for (const node of ast) {
         if (node.type === 'element' && node.tag === 'p') {
           const element = node as { type: 'element'; tag: string; children: ASTNode[] };
-
           // 第一个段落包含所有文本节点
-          afterAST.push({
-            type: 'element',
-            tag: 'p',
-            children: element.children
-          });
-
+          afterAST.push(createParagraphNode(element.children));
           // 其他3个空段落
           for (let i = 1; i < element.children.length; i++) {
-            afterAST.push({
-              type: 'element',
-              tag: 'p',
-              children: []
-            });
+            afterAST.push(createParagraphNode([]));
           }
         }
       }
-
-      return {
-        beforeAST: [],
-        afterAST,
-        newCursorPosition: 0
-      };
+      return { beforeAST: [], afterAST, newCursorPosition: 0 };
     } else {
       // 如果偏移量更靠近最终点，则所有内容都保留在 beforeAST
-      return {
-        beforeAST: ast,
-        afterAST: [],
-        newCursorPosition: 0
-      };
+      return { beforeAST: ast, afterAST: [], newCursorPosition: 0 };
     }
   }
 
   const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, start);
   const targetNode = getTargetTextNode(newAst, nodeIndex);
 
-  if (!targetNode) {
-    return {
-      beforeAST: ast,
-      afterAST: [],
-      newCursorPosition: start
-    };
+  if (!targetNode || targetNode.type !== 'text') {
+    return { beforeAST: ast, afterAST: [], newCursorPosition: start };
   }
 
   // 拆分文本：光标前和光标后
@@ -299,85 +377,45 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
 
   // 创建前面的AST
   const beforeAST = cloneAST(ast);
-
-  // 创建后面的AST
-  let afterAST: ASTNode[] = [];
   const beforeTargetNode = getTargetTextNode(beforeAST, nodeIndex);
   if (beforeTargetNode) {
     beforeTargetNode.value = before;
   }
 
-  // 如果光标在当前节点的末尾，需要将后续所有节点移到 afterAST
-  if (textOffset === targetNode.value.length) {
-    // 光标在节点末尾，需要处理嵌套结构
-    const originalAST = cloneAST(ast);
-    // const afterNodes: ASTNode[] = [];
+  // 查找段落结构
+  const originalAST = cloneAST(ast);
+  let foundParagraph = false;
+  let paragraphIndex = -1;
 
-    // 检查是否在段落内部
-    let foundParagraph = false;
-    let paragraphIndex = -1;
-
-    for (let i = 0; i < originalAST.length; i++) {
-      const node = originalAST[i];
-      if (node.type === 'element' && node.tag === 'p') {
-        foundParagraph = true;
-        paragraphIndex = i;
-        break;
-      }
+  for (let i = 0; i < originalAST.length; i++) {
+    const node = originalAST[i];
+    if (node.type === 'element' && node.tag === 'p') {
+      foundParagraph = true;
+      paragraphIndex = i;
+      break;
     }
+  }
 
-    if (foundParagraph && paragraphIndex >= 0) {
-      // 在段落内部进行拆分
-      const paragraph = originalAST[paragraphIndex] as { type: 'element'; tag: string; children: ASTNode[] };
-      const paragraphChildren = paragraph.children;
+  let afterAST: ASTNode[] = [];
 
-      // 找到目标节点在段落中的位置
-      let targetChildIndex = -1;
-      for (let i = 0; i < paragraphChildren.length; i++) {
-        const child = paragraphChildren[i];
-        if (child.type === 'text' && child.value === targetNode.value) {
-          targetChildIndex = i;
-          break;
-        }
-      }
+  if (foundParagraph && paragraphIndex >= 0) {
+    // 在段落内部进行拆分
+    const paragraph = originalAST[paragraphIndex] as { type: 'element'; tag: string; children: ASTNode[] };
+    const paragraphChildren = paragraph.children;
+    const targetChildIndex = findTargetNodeInParagraph(paragraphChildren, targetNode);
 
-      if (targetChildIndex >= 0) {
-        // 创建 beforeAST - 只包含当前段落，但截断目标节点
-        const beforeParagraph = cloneAST([paragraph] as unknown as ASTNode[])[0] as { type: 'element'; tag: string; children: ASTNode[] };
-        beforeParagraph.children = paragraphChildren.slice(0, targetChildIndex + 1);
-        if (beforeParagraph.children[targetChildIndex]) {
-          beforeParagraph.children[targetChildIndex] = {
-            type: 'text',
-            value: before,
-            marks: targetNode.marks ? [...targetNode.marks] : undefined
-          };
-        }
+    if (targetChildIndex >= 0) {
+      // 创建 beforeAST
+      const beforeASTResult = createBeforeASTInParagraph(originalAST, paragraphIndex, targetNode, before);
+      beforeAST.splice(0, beforeAST.length, ...beforeASTResult);
 
-        // 创建 afterAST - 包含目标节点之后的节点
-        const afterChildren = paragraphChildren.slice(targetChildIndex + 1);
-        if (afterChildren.length > 0) {
-          afterAST = [{
-            type: "element",
-            tag: "p",
-            children: afterChildren
-          }];
-        } else {
-          afterAST = [{
-            type: "element",
-            tag: "p",
-            children: [{
-              type: "text",
-              value: "",
-              marks: targetNode.marks ? [...targetNode.marks] : undefined
-            }]
-          }];
-        }
-
-        // 更新 beforeAST
-        beforeAST[paragraphIndex] = beforeParagraph as unknown as ASTNode;
-      }
-    } else {
-      // 处理扁平结构（原有逻辑）
+      // 创建 afterAST
+      afterAST = createAfterASTInParagraph(paragraphChildren, targetChildIndex, targetNode, after);
+    }
+  } else {
+    // 处理扁平结构
+    if (textOffset === targetNode.value.length) {
+      // 光标在节点末尾
       const afterNodes: ASTNode[] = [];
       let currentNodeIndex = 0;
       let foundTargetNode = false;
@@ -387,11 +425,7 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
         if (node.type === 'text' && node.value === targetNode.value && !foundTargetNode) {
           foundTargetNode = true;
           if (before !== '') {
-            beforeAST[currentNodeIndex] = {
-              type: 'text',
-              value: before,
-              marks: targetNode.marks ? [...targetNode.marks] : undefined
-            };
+            beforeAST[currentNodeIndex] = createTextNode(before, targetNode.marks);
             currentNodeIndex++;
           }
           continue;
@@ -406,141 +440,17 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
       }
 
       beforeAST.length = currentNodeIndex;
-
-      if (afterNodes.length > 0) {
-        afterAST = [{
-          type: "element",
-          tag: "p",
-          children: afterNodes
-        }];
-      } else {
-        afterAST = [{
-          type: "element",
-          tag: "p",
-          children: [{
-            type: "text",
-            value: "",
-            marks: targetNode.marks ? [...targetNode.marks] : undefined
-          }]
-        }];
-      }
-    }
-  } else {
-    // 光标在节点中间，需要将当前节点的后半部分和后续所有节点移到 afterAST
-    const originalAST = cloneAST(ast);
-
-    // 找到目标节点在段落中的位置
-    let foundParagraph = false;
-    let paragraphIndex = -1;
-
-    for (let i = 0; i < originalAST.length; i++) {
-      const node = originalAST[i];
-      if (node.type === 'element' && node.tag === 'p') {
-        foundParagraph = true;
-        paragraphIndex = i;
-        break;
-      }
-    }
-
-    if (foundParagraph && paragraphIndex >= 0) {
-      const paragraph = originalAST[paragraphIndex] as { type: 'element'; tag: string; children: ASTNode[] };
-      const paragraphChildren = paragraph.children;
-
-      // 找到目标节点在段落中的位置
-      let targetChildIndex = -1;
-      for (let i = 0; i < paragraphChildren.length; i++) {
-        const child = paragraphChildren[i];
-        if (child.type === 'text' && child.value === targetNode.value) {
-          targetChildIndex = i;
-          break;
-        }
-      }
-
-      if (targetChildIndex >= 0) {
-        // 创建 beforeAST - 只包含当前段落，但截断目标节点
-        const beforeParagraph = cloneAST([paragraph] as unknown as ASTNode[])[0] as { type: 'element'; tag: string; children: ASTNode[] };
-        beforeParagraph.children = paragraphChildren.slice(0, targetChildIndex + 1);
-        if (beforeParagraph.children[targetChildIndex]) {
-          beforeParagraph.children[targetChildIndex] = {
-            type: 'text',
-            value: before,
-            marks: targetNode.marks ? [...targetNode.marks] : undefined
-          };
-        }
-
-        // 创建 afterAST - 包含目标节点后半部分和后续所有节点
-        const afterChildren = [];
-
-        // 添加目标节点的后半部分（如果有内容）
-        if (after !== '') {
-          afterChildren.push({
-            type: 'text',
-            value: after,
-            marks: targetNode.marks ? [...targetNode.marks] : undefined
-          });
-        }
-
-        // 添加目标节点之后的所有节点
-        afterChildren.push(...paragraphChildren.slice(targetChildIndex + 1));
-
-        if (afterChildren.length > 0) {
-          afterAST = [{
-            type: "element",
-            tag: "p",
-            children: afterChildren
-          }];
-        } else {
-          afterAST = [{
-            type: "element",
-            tag: "p",
-            children: [{
-              type: "text",
-              value: "",
-              marks: targetNode.marks ? [...targetNode.marks] : undefined
-            }]
-          }];
-        }
-
-        // 更新 beforeAST
-        beforeAST[paragraphIndex] = beforeParagraph as unknown as ASTNode;
-      }
+      afterAST = afterNodes.length > 0 ? [createParagraphNode(afterNodes)] : [createParagraphNode([createEmptyTextNode(targetNode.marks)])];
     } else {
-      // 处理扁平结构的情况
-      if (after !== '') {
-        const afterTextNode: ASTNode = {
-          type: "text",
-          value: after,
-          marks: targetNode.marks ? [...targetNode.marks] : undefined
-        };
-
-        afterAST = [{
-          type: "element",
-          tag: "p",
-          children: [afterTextNode]
-        }];
-      } else {
-        const emptyTextNode: ASTNode = {
-          type: "text",
-          value: "",
-          marks: targetNode.marks ? [...targetNode.marks] : undefined
-        };
-
-        afterAST = [{
-          type: "element",
-          tag: "p",
-          children: [emptyTextNode]
-        }];
-      }
+      // 光标在节点中间
+      afterAST = createAfterASTFlat(targetNode, after);
     }
   }
-
-  // 新光标位置在后面的AST的开始
-  const newCursorPosition = 0;
 
   return {
     beforeAST: cleanupEmptyNodes(beforeAST),
     afterAST,
-    newCursorPosition
+    newCursorPosition: 0
   };
 }
 
