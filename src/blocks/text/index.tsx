@@ -11,6 +11,10 @@ interface TextBlockProps {
   blockIndex: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
   onUpdateBlock?: (blockIndex: number, newContent: ASTNode[]) => void;
+  onDeleteBlock?: (blockIndex: number) => void;
+  onFindPreviousTextBlock?: (currentIndex: number) => number;
+  onFocusBlockAtEnd?: (blockIndex: number) => void;
+  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ASTNode[]) => void;
 }
 
 export interface TextMethods extends BlockComponentMethods {
@@ -22,7 +26,11 @@ const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
   block,
   blockIndex,
   onInsertBlock,
-  onUpdateBlock
+  onUpdateBlock,
+  onDeleteBlock,
+  onFindPreviousTextBlock,
+  onFocusBlockAtEnd,
+  onMergeWithPreviousBlock
 }, ref) => {
   const astEditorRef = useRef<TextMethods>(null);
 
@@ -47,15 +55,17 @@ const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
   };
 
   return (
-    <div>
-      <ASTEditor
-        ref={astEditorRef}
-        initialAST={block.content}
-        onChange={handleASTChange}
-        blockIndex={blockIndex}
-        onInsertBlock={onInsertBlock}
-      />
-    </div>
+    <ASTEditor
+      ref={astEditorRef}
+      initialAST={block.content}
+      onChange={handleASTChange}
+      blockIndex={blockIndex}
+      onInsertBlock={onInsertBlock}
+      onDeleteBlock={onDeleteBlock}
+      onFindPreviousTextBlock={onFindPreviousTextBlock}
+      onFocusBlockAtEnd={onFocusBlockAtEnd}
+      onMergeWithPreviousBlock={onMergeWithPreviousBlock}
+    />
   );
 });
 

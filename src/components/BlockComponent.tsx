@@ -11,17 +11,23 @@ interface BlockComponentProps {
   blockIndex: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
   onUpdateBlock?: (blockIndex: number, newContent: ASTNode[]) => void;
+  onDeleteBlock?: (blockIndex: number) => void;
+  onFindPreviousTextBlock?: (currentIndex: number) => number;
+  onFocusBlockAtEnd?: (blockIndex: number) => void;
+  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ASTNode[]) => void;
 }
 
 export default function BlockComponent({
   block,
   blockIndex,
   onInsertBlock,
-  onUpdateBlock
+  onUpdateBlock,
+  onDeleteBlock,
+  onFindPreviousTextBlock,
+  onFocusBlockAtEnd,
+  onMergeWithPreviousBlock
 }: BlockComponentProps) {
   let component = null
-
-  console.log(JSON.stringify(block.content), '>>>1')
 
   switch (block.type) {
     case "media":
@@ -44,6 +50,10 @@ export default function BlockComponent({
             blockIndex={blockIndex}
             onInsertBlock={onInsertBlock}
             onUpdateBlock={onUpdateBlock}
+            onDeleteBlock={onDeleteBlock}
+            onFindPreviousTextBlock={onFindPreviousTextBlock}
+            onFocusBlockAtEnd={onFocusBlockAtEnd}
+            onMergeWithPreviousBlock={onMergeWithPreviousBlock}
           />
         </React.Suspense>
       );
@@ -54,7 +64,7 @@ export default function BlockComponent({
   }
 
   return (
-    <div key={block.id} className="block-container">
+    <div key={block.id} className="block-container" data-block-index={blockIndex}>
       {component}
     </div>
   )

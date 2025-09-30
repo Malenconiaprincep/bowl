@@ -42,13 +42,26 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
   onChange?: (ast: ASTNode[]) => void;
   blockIndex?: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
+  onDeleteBlock?: (blockIndex: number) => void;
+  onFindPreviousTextBlock?: (currentIndex: number) => number;
+  onFocusBlockAtEnd?: (blockIndex: number) => void;
+  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ASTNode[]) => void;
 }>(({
   initialAST,
   onChange,
   blockIndex,
-  onInsertBlock
+  onInsertBlock,
+  onDeleteBlock,
+  onFindPreviousTextBlock,
+  onFocusBlockAtEnd,
+  onMergeWithPreviousBlock
 }, ref) => {
   const [ast, setAst] = useState<ASTNode[]>(initialAST);
+
+  // 当initialAST变化时，更新本地状态
+  useLayoutEffect(() => {
+    setAst(initialAST);
+  }, [initialAST]);
 
   // 使用光标位置管理 hook
   const {
@@ -132,8 +145,14 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
     editorRef,
     isComposing,
     blockIndex,
-    onInsertBlock
+    onInsertBlock,
+    onDeleteBlock,
+    onFindPreviousTextBlock,
+    onFocusBlockAtEnd,
+    onMergeWithPreviousBlock
   );
+
+  console.log(ast, '>>>3')
 
   return (
     <div>

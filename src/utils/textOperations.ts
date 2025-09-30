@@ -453,3 +453,67 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
   };
 }
 
+// 合并两个AST的内容，将currentAST的内容追加到previousAST的末尾
+export function mergeASTContent(previousAST: ASTNode[], currentAST: ASTNode[]): { mergedAST: ASTNode[], newCursorPosition: number } {
+  const mergedAST = cloneAST(previousAST);
+
+  // 提取currentAST中的所有文本内容
+  const currentText = extractAllTextContent(currentAST);
+
+  // 找到previousAST的最后一个段落
+  const lastParagraphIndex = findLastParagraphIndex(mergedAST);
+
+  if (lastParagraphIndex !== -1) {
+    // 在最后一个段落中添加文本
+    const lastParagraph = mergedAST[lastParagraphIndex] as { type: 'element'; tag: string; children: ASTNode[] };
+    const updatedLastParagraph = {
+      ...lastParagraph,
+      children: [
+        ...lastParagraph.children,
+        { type: 'text' as const, value: currentText }
+      ]
+    };
+
+    mergedAST[lastParagraphIndex] = updatedLastParagraph as ASTNode;
+  } else {
+    // 如果没有找到段落，创建一个新段落
+    const newParagraph = createParagraphNode([
+      { type: 'text' as const, value: currentText }
+    ]);
+    mergedAST.push(newParagraph);
+  }
+
+  // 计算新的光标位置（在合并后的内容末尾）
+  const textNodes = getTextNodes(mergedAST);
+  const newCursorPosition = textNodes.reduce((sum, node) => sum + node.value.length, 0);
+
+  return {
+    mergedAST: cleanupEmptyNodes(mergedAST),
+    newCursorPosition
+  };
+}
+
+// 提取AST中所有文本内容的辅助函数
+function extractAllTextContent(ast: ASTNode[]): string {
+  let text = '';
+  for (const node of ast) {
+    if (node.type === 'text') {
+      text += node.value;
+    } else if (node.type === 'element' && node.children) {
+      text += extractAllTextContent(node.children);
+    }
+  }
+  return text;
+}
+
+// 找到最后一个段落的索引
+function findLastParagraphIndex(ast: ASTNode[]): number {
+  for (let i = ast.length - 1; i >= 0; i--) {
+    const node = ast[i];
+    if (node.type === 'element' && node.tag === 'p') {
+      return i;
+    }
+  }
+  return -1;
+}
+
