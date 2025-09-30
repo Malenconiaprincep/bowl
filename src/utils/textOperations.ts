@@ -236,15 +236,53 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
   const textNodes = getTextNodes(newAst);
 
   // 验证选区有效性
-  if (!isValidSelection(selection, textNodes)) {
-    return {
-      beforeAST: ast,
-      afterAST: [],
-      newCursorPosition: selection.start
-    };
+  const { start } = selection;
+  const totalLength = textNodes.reduce((sum, node) => sum + node.value.length, 0);
+
+  // 检查偏移量是否有效
+  if (!isValidSelection(selection, textNodes) || start < 0 || start > totalLength) {
+    // 当偏移量无效时，根据偏移量更靠近起始点还是最终点来决定拆分行为
+    // 如果偏移量更靠近起始点（0），则所有内容都移到 afterAST
+    if (start < 0 || Math.abs(start) < Math.abs(start - totalLength)) {
+      // 创建4个段落，第一个包含所有文本节点，其他为空
+      const afterAST: ASTNode[] = [];
+      for (const node of ast) {
+        if (node.type === 'element' && node.tag === 'p') {
+          const element = node as { type: 'element'; tag: string; children: ASTNode[] };
+
+          // 第一个段落包含所有文本节点
+          afterAST.push({
+            type: 'element',
+            tag: 'p',
+            children: element.children
+          });
+
+          // 其他3个空段落
+          for (let i = 1; i < element.children.length; i++) {
+            afterAST.push({
+              type: 'element',
+              tag: 'p',
+              children: []
+            });
+          }
+        }
+      }
+
+      return {
+        beforeAST: [],
+        afterAST,
+        newCursorPosition: 0
+      };
+    } else {
+      // 如果偏移量更靠近最终点，则所有内容都保留在 beforeAST
+      return {
+        beforeAST: ast,
+        afterAST: [],
+        newCursorPosition: 0
+      };
+    }
   }
 
-  const { start } = selection;
   const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, start);
   const targetNode = getTargetTextNode(newAst, nodeIndex);
 
