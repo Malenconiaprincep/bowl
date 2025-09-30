@@ -621,7 +621,6 @@ describe('textOperations', () => {
 
       const result = splitTextAtCursor(ast, selection);
 
-
       // 前面的 AST 应该包含 "Hel" 和后续节点
       expect(result.beforeAST).toHaveLength(1);
       const beforeElement = result.beforeAST[0] as ElementNode;
@@ -665,153 +664,169 @@ describe('textOperations', () => {
       expect(result.newCursorPosition).toBe(0);
     });
 
-    // it('应该在文本开头按回车时创建空的前面 AST', () => {
-    //   const ast = createRealWorldAST();
-    //   const selection: Selection = {
-    //     start: 0, // 文本开头
-    //     end: 0,
-    //   };
+    it('应该在文本开头按回车时创建空的前面 AST', () => {
+      const ast = createRealWorldAST();
+      const selection: Selection = {
+        start: 0, // 文本开头
+        end: 0,
+      };
 
-    //   const result = splitTextAtCursor(ast, selection);
+      const result = splitTextAtCursor(ast, selection);
 
-    //   // 前面的 AST 应该包含后续节点（空文本节点被清理了）
-    //   expect(result.beforeAST).toHaveLength(1);
-    //   const beforeElement = result.beforeAST[0] as ElementNode;
-    //   expect(beforeElement.type).toBe('element');
-    //   expect(beforeElement.tag).toBe('p');
-    //   expect(beforeElement.children).toHaveLength(3);
-    //   expect(beforeElement.children[0]).toEqual({
-    //     type: 'text',
-    //     value: 'Wor',
-    //     marks: ['b']
-    //   });
-    //   expect(beforeElement.children[1]).toEqual({
-    //     type: 'text',
-    //     value: 'ld',
-    //     marks: ['i', 'b']
-    //   });
-    //   expect(beforeElement.children[2]).toEqual({
-    //     type: 'text',
-    //     value: '! This is an editable AST editor.',
-    //     marks: undefined
-    //   });
+      // 前面的 AST 应该包含后续节点（空文本节点被清理了）
+      expect(result.beforeAST).toHaveLength(0);
 
-    //   // 后面的 AST 应该包含 "Hello " 文本
-    //   expect(result.afterAST).toHaveLength(1);
-    //   const afterElement = result.afterAST[0] as ElementNode;
-    //   expect(afterElement.type).toBe('element');
-    //   expect(afterElement.tag).toBe('p');
-    //   expect(afterElement.children).toHaveLength(1);
-    //   expect(afterElement.children[0]).toEqual({
-    //     type: 'text',
-    //     value: 'Hello ',
-    //     marks: undefined
-    //   });
+      // 后面的 AST 应该包含 "Hello " 文本
+      expect(result.afterAST).toHaveLength(1);
+      const afterElement = result.afterAST[0] as ElementNode;
+      expect(afterElement.type).toBe('element');
+      expect(afterElement.tag).toBe('p');
+      expect(afterElement.children).toHaveLength(4);
+      expect(afterElement.children[0]).toEqual({
+        type: 'text',
+        value: 'Hello ',
+        marks: undefined
+      });
+      expect(afterElement.children[1]).toEqual({
+        type: 'text',
+        value: 'Wor',
+        marks: ['b']
+      });
+      expect(afterElement.children[2]).toEqual({
+        type: 'text',
+        value: 'ld',
+        marks: ['i', 'b']
+      });
+      expect(afterElement.children[3]).toEqual({
+        type: 'text',
+        value: '! This is an editable AST editor.',
+        marks: undefined
+      });
 
-    //   expect(result.newCursorPosition).toBe(0);
-    // });
+      expect(result.newCursorPosition).toBe(0);
+    });
 
-    // it('应该在文本结尾按回车时创建空的后面 AST', () => {
-    //   const ast = createRealWorldAST();
-    //   const selection: Selection = {
-    //     start: 43, // 文本结尾 (Hello + Wor + ld + ! This is an editable AST editor. = 6 + 3 + 2 + 32 = 43)
-    //     end: 43,
-    //   };
+    // const createRealWorldAST = (): ASTNode[] => [
+    //   createElementNode('p', [
+    //     createTextNode('Hello '),
+    //     createTextNode('Wor', ['b']),
+    //     createTextNode('ld', ['i', 'b']),
+    //     createTextNode('! This is an editable AST editor.'),
+    //   ]),
+    // ];
 
-    //   const result = splitTextAtCursor(ast, selection);
+    it('应该在文本结尾按回车时创建空的后面 AST', () => {
+      const ast = createRealWorldAST();
+      const selection: Selection = {
+        start: 43, // 文本结尾 (Hello + Wor + ld + ! This is an editable AST editor. = 6 + 3 + 2 + 32 = 43)
+        end: 43,
+      };
 
-    //   // 前面的 AST 应该包含所有原始内容
-    //   expect(result.beforeAST).toHaveLength(1);
-    //   const beforeElement = result.beforeAST[0] as ElementNode;
-    //   expect(beforeElement.type).toBe('element');
-    //   expect(beforeElement.tag).toBe('p');
-    //   expect(beforeElement.children).toHaveLength(4);
-    //   expect(beforeElement.children[0]).toEqual({
-    //     type: 'text',
-    //     value: 'Hello ',
-    //     marks: undefined
-    //   });
-    //   expect(beforeElement.children[1]).toEqual({
-    //     type: 'text',
-    //     value: 'Wor',
-    //     marks: ['b']
-    //   });
-    //   expect(beforeElement.children[2]).toEqual({
-    //     type: 'text',
-    //     value: 'ld',
-    //     marks: ['i', 'b']
-    //   });
-    //   expect(beforeElement.children[3]).toEqual({
-    //     type: 'text',
-    //     value: '! This is an editable AST editor',
-    //     marks: undefined
-    //   });
+      const result = splitTextAtCursor(ast, selection);
 
-    //   // 后面的 AST 应该包含空的文本节点
-    //   expect(result.afterAST).toHaveLength(1);
-    //   const afterElement = result.afterAST[0] as ElementNode;
-    //   expect(afterElement.type).toBe('element');
-    //   expect(afterElement.tag).toBe('p');
-    //   expect(afterElement.children).toHaveLength(1);
-    //   expect(afterElement.children[0]).toEqual({
-    //     type: 'text',
-    //     value: '.',
-    //     marks: undefined
-    //   });
+      // 前面的 AST 应该包含所有原始内容
+      expect(result.beforeAST).toHaveLength(1);
+      const beforeElement = result.beforeAST[0] as ElementNode;
+      expect(beforeElement.type).toBe('element');
+      expect(beforeElement.tag).toBe('p');
+      expect(beforeElement.children).toHaveLength(4);
+      expect(beforeElement.children[0]).toEqual({
+        type: 'text',
+        value: 'Hello ',
+        marks: undefined
+      });
+      expect(beforeElement.children[1]).toEqual({
+        type: 'text',
+        value: 'Wor',
+        marks: ['b']
+      });
+      expect(beforeElement.children[2]).toEqual({
+        type: 'text',
+        value: 'ld',
+        marks: ['i', 'b']
+      });
+      expect(beforeElement.children[3]).toEqual({
+        type: 'text',
+        value: '! This is an editable AST editor',
+        marks: undefined
+      });
 
-    //   expect(result.newCursorPosition).toBe(0);
-    // });
+      // 后面的 AST 应该包含空的文本节点
+      expect(result.afterAST).toHaveLength(1);
+      const afterElement = result.afterAST[0] as ElementNode;
+      expect(afterElement.type).toBe('element');
+      expect(afterElement.tag).toBe('p');
+      expect(afterElement.children).toHaveLength(1);
+      expect(afterElement.children[0]).toEqual({
+        type: 'text',
+        value: '.',
+        marks: undefined
+      });
 
-    // it('应该在嵌套元素中的文本按回车时正确拆分', () => {
-    //   const ast = createRealWorldAST();
-    //   const selection: Selection = {
-    //     start: 8, // "Wor" 的 "r" 后面
-    //     end: 8,
-    //   };
+      expect(result.newCursorPosition).toBe(0);
+    });
 
-    //   const result = splitTextAtCursor(ast, selection);
+    // const createRealWorldAST = (): ASTNode[] => [
+    //   createElementNode('p', [
+    //     createTextNode('Hello '),
+    //     createTextNode('Wor', ['b']),
+    //     createTextNode('ld', ['i', 'b']),
+    //     createTextNode('! This is an editable AST editor.'),
+    //   ]),
+    // ];
 
-    //   // 前面的 AST 应该包含 "Hello " + "Wo" + "ld" + "! This is an editable AST editor."
-    //   expect(result.beforeAST).toHaveLength(1);
-    //   const beforeElement = result.beforeAST[0] as ElementNode;
-    //   expect(beforeElement.type).toBe('element');
-    //   expect(beforeElement.tag).toBe('p');
-    //   expect(beforeElement.children).toHaveLength(4);
-    //   expect(beforeElement.children[0]).toEqual({
-    //     type: 'text',
-    //     value: 'Hello ',
-    //     marks: undefined
-    //   });
-    //   expect(beforeElement.children[1]).toEqual({
-    //     type: 'text',
-    //     value: 'Wo',
-    //     marks: ['b']
-    //   });
-    //   expect(beforeElement.children[2]).toEqual({
-    //     type: 'text',
-    //     value: 'ld',
-    //     marks: ['i', 'b']
-    //   });
-    //   expect(beforeElement.children[3]).toEqual({
-    //     type: 'text',
-    //     value: '! This is an editable AST editor.',
-    //     marks: undefined
-    //   });
+    it('应该在嵌套元素中的文本按回车时正确拆分', () => {
+      const ast = createRealWorldAST();
+      const selection: Selection = {
+        start: 8, // "Wor" 的 "r" 后面
+        end: 8,
+      };
 
-    //   // 后面的 AST 应该包含 "r"
-    //   expect(result.afterAST).toHaveLength(1);
-    //   const afterElement = result.afterAST[0] as ElementNode;
-    //   expect(afterElement.type).toBe('element');
-    //   expect(afterElement.tag).toBe('p');
-    //   expect(afterElement.children).toHaveLength(1);
-    //   expect(afterElement.children[0]).toEqual({
-    //     type: 'text',
-    //     value: 'r',
-    //     marks: ['b']
-    //   });
+      const result = splitTextAtCursor(ast, selection);
 
-    //   expect(result.newCursorPosition).toBe(0);
-    // });
+      // 前面的 AST 应该包含 "Hello " + "Wo" + "ld" + "! This is an editable AST editor."
+      expect(result.beforeAST).toHaveLength(1);
+      const beforeElement = result.beforeAST[0] as ElementNode;
+      expect(beforeElement.type).toBe('element');
+      expect(beforeElement.tag).toBe('p');
+      expect(beforeElement.children).toHaveLength(2);
+      expect(beforeElement.children[0]).toEqual({
+        type: 'text',
+        value: 'Hello ',
+        marks: undefined
+      });
+      expect(beforeElement.children[1]).toEqual({
+        type: 'text',
+        value: 'Wo',
+        marks: ['b']
+      });
+
+
+      // 后面的 AST 应该包含 "r"
+      expect(result.afterAST).toHaveLength(1);
+      const afterElement = result.afterAST[0] as ElementNode;
+      expect(afterElement.type).toBe('element');
+      expect(afterElement.tag).toBe('p');
+      expect(afterElement.children).toHaveLength(3);
+      expect(afterElement.children[0]).toEqual({
+        type: 'text',
+        value: 'r',
+        marks: ['b']
+      });
+
+      expect(afterElement.children[1]).toEqual({
+        type: 'text',
+        value: 'ld',
+        marks: ['i', 'b']
+      });
+      expect(afterElement.children[2]).toEqual({
+        type: 'text',
+        value: '! This is an editable AST editor.',
+        marks: undefined
+      });
+
+      expect(result.newCursorPosition).toBe(0);
+    });
 
     // it('应该处理无效选区时返回原 AST', () => {
     //   const ast = createRealWorldAST();
