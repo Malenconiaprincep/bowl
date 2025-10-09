@@ -457,35 +457,43 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
 export function mergeASTContent(previousAST: ASTNode[], currentAST: ASTNode[]): { mergedAST: ASTNode[], newCursorPosition: number } {
   const mergedAST = cloneAST(previousAST);
 
-  // 提取currentAST中的所有文本内容
-  const currentText = extractAllTextContent(currentAST);
+  // 提取currentAST中的所有节点（保留样式信息）
+  const currentNodes = extractAllASTNodes(currentAST);
 
   // 找到previousAST的最后一个段落
   const lastParagraphIndex = findLastParagraphIndex(mergedAST);
 
+  // 计算合并前最后一个段落的文本长度（在合并之前计算）
+  let originalLastParagraphLength = 0;
   if (lastParagraphIndex !== -1) {
-    // 在最后一个段落中添加文本
+    const originalLastParagraph = mergedAST[lastParagraphIndex];
+    if (originalLastParagraph.type === 'element') {
+      const originalLastParagraphTextNodes = getTextNodes([originalLastParagraph]);
+      originalLastParagraphLength = originalLastParagraphTextNodes.reduce((sum, node) => sum + node.value.length, 0);
+    }
+  }
+
+  if (lastParagraphIndex !== -1) {
+    // 在最后一个段落中添加节点
     const lastParagraph = mergedAST[lastParagraphIndex] as { type: 'element'; tag: string; children: ASTNode[] };
     const updatedLastParagraph = {
       ...lastParagraph,
       children: [
         ...lastParagraph.children,
-        { type: 'text' as const, value: currentText }
+        ...currentNodes
       ]
     };
 
     mergedAST[lastParagraphIndex] = updatedLastParagraph as ASTNode;
   } else {
     // 如果没有找到段落，创建一个新段落
-    const newParagraph = createParagraphNode([
-      { type: 'text' as const, value: currentText }
-    ]);
+    const newParagraph = createParagraphNode(currentNodes);
     mergedAST.push(newParagraph);
   }
 
-  // 计算新的光标位置（在合并后的内容末尾）
-  const textNodes = getTextNodes(mergedAST);
-  const newCursorPosition = textNodes.reduce((sum, node) => sum + node.value.length, 0);
+  // 计算新的光标位置（在合并点的位置）
+  // 光标应该放在合并前最后一个段落的末尾，也就是合并点的位置
+  const newCursorPosition = originalLastParagraphLength;
 
   return {
     mergedAST: cleanupEmptyNodes(mergedAST),
@@ -493,17 +501,23 @@ export function mergeASTContent(previousAST: ASTNode[], currentAST: ASTNode[]): 
   };
 }
 
-// 提取AST中所有文本内容的辅助函数
-function extractAllTextContent(ast: ASTNode[]): string {
-  let text = '';
+
+// 提取AST中所有节点的辅助函数（保留样式信息）
+function extractAllASTNodes(ast: ASTNode[]): ASTNode[] {
+  const nodes: ASTNode[] = [];
+
   for (const node of ast) {
     if (node.type === 'text') {
-      text += node.value;
+      // 直接添加文本节点，保留marks样式信息
+      nodes.push({ ...node });
     } else if (node.type === 'element' && node.children) {
-      text += extractAllTextContent(node.children);
+      // 对于元素节点，递归提取其子节点
+      const childNodes = extractAllASTNodes(node.children);
+      nodes.push(...childNodes);
     }
   }
-  return text;
+
+  return nodes;
 }
 
 // 找到最后一个段落的索引

@@ -129,7 +129,7 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
   }, [blocks])
 
   return (
-    <div>
+    <div className='page-block'>
       {blocks.map((block, index) => (
         <BlockComponent
           key={index}

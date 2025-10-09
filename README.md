@@ -37,30 +37,34 @@ src/
 ## 技术实现
 
 ### 1. 状态管理
+
 - 使用 React Hooks 管理编辑器状态
 - 包含内容、选区、历史记录等状态
 
 ### 2. 选区操作
+
 - 使用 Selection API 和 Range API
 - 支持获取、设置、保存、恢复选区
 
 ### 3. 命令执行
+
 - 使用 document.execCommand 执行格式化命令
 - 支持加粗、斜体、下划线等基础格式
 
 ### 4. 事件处理
+
 - 监听输入、键盘、选区变化等事件
 - 支持粘贴时清理格式
 
 ## 使用方法
 
 ```tsx
-import { EditorContainer } from './components/editor/EditorContainer';
+import { EditorContainer } from "./components/editor/EditorContainer"
 
 function App() {
   const handleContentChange = (content: string) => {
-    console.log('内容变化:', content);
-  };
+    console.log("内容变化:", content)
+  }
 
   return (
     <EditorContainer
@@ -68,7 +72,7 @@ function App() {
       placeholder="开始输入..."
       onChange={handleContentChange}
     />
-  );
+  )
 }
 ```
 
@@ -102,7 +106,5 @@ npm run build
 - document.execCommand 已被废弃，生产环境建议使用更现代的方案
 - 选区操作需要仔细处理边界情况
 
-
-
-
-
+TODO:
+优化 page 的一些行为，比如 删除要聚焦， 合并，其实应该通过 useTextInput 的行为来处理，而不是传一堆逻辑到子组件里
