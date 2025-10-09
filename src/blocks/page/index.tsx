@@ -6,6 +6,7 @@ import { blockManager } from '../../utils/blockManager'
 import { mergeASTContent } from '../../utils/textOperations'
 import { calculateTextLength, findPreviousTextBlock, isTextBlock } from '../../utils/blockUtils'
 import type { TextMethods } from '../text'
+import './style.scss'
 
 interface PageBlockProps {
   initialBlocks: Block[]

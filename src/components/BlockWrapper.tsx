@@ -12,7 +12,7 @@ export function BlockWrapper<P extends object>(
   WrappedComponent: React.ComponentType<P>
 ) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const BlockWrapperComponent = React.forwardRef<BlockComponentMethods, P & { block: Block }>((props, ref) => {
+  const BlockWrapperComponent = React.forwardRef<BlockComponentMethods, P & { block: Block }>((props, _ref) => {
     const elementRef = useRef<HTMLDivElement>(null);
     const componentRef = useRef<BlockComponentMethods>(null);
 

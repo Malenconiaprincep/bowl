@@ -67,7 +67,7 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
   // let parentChildren: ASTNode[] = [];
   let targetIndex = -1;
 
-  function findParent(node: ASTNode, parent: ASTNode | null, children: ASTNode[], index: number): void {
+  function findParent(node: ASTNode, parent: ASTNode | null, _children: ASTNode[], index: number): void {
     if (node.type === "text") {
       if (currentIndex === nodeIndex) {
         found = true;

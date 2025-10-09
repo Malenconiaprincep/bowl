@@ -157,8 +157,9 @@ describe('textOperations', () => {
 
       console.log(JSON.stringify(result, null, 2), '>>>deleteTextAtPosition')
 
-      expect(result[0].children).toHaveLength(1);
+      expect(result[0].type).toBe('element');
       const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      expect(pElement.children).toHaveLength(1);
       expect(pElement.children[0]).toEqual({
         type: 'text',
         value: 'Hello ',

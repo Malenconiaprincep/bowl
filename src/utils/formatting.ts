@@ -1,4 +1,4 @@
-import type { ASTNode, TextNode, Mark } from "../types/ast";
+import type { ASTNode, TextNode, Mark, ElementTag } from "../types/ast";
 import { cloneAST, getTextNodes, getTargetTextNode, replaceTextNodeInAST } from "./core";
 import type { Selection } from "./selection";
 import { isValidSelection, findNodeAndOffsetBySelectionOffset, hasSelection } from "./selection";
@@ -129,7 +129,7 @@ function applyFormatToCrossNodeSelection(
 
       result.push({
         type: 'element',
-        tag: pNode.tag,
+        tag: pNode.tag as ElementTag,
         children: newChildren
       });
     } else {
