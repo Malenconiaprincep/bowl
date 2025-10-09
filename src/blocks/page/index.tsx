@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import type { Block } from '../../types/blocks'
 import type { ASTNode } from '../../types/ast'
 import BlockComponent from '../../components/BlockComponent'
@@ -14,7 +14,10 @@ interface PageBlockProps {
 
 export default function PageBlock({ initialBlocks }: PageBlockProps) {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks)
+  const blocksRef = useRef(blocks)
 
+  // 保持blocksRef与blocks同步
+  blocksRef.current = blocks
 
   // 聚焦到指定 block 的辅助函数
   const focusBlock = useCallback((blockId: string) => {
@@ -28,7 +31,8 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
 
   // 聚焦到指定 block 末尾的辅助函数
   const focusBlockAtEnd = useCallback((blockIndex: number) => {
-    const block = blocks[blockIndex]
+    const currentBlocks = blocksRef.current
+    const block = currentBlocks[blockIndex]
     if (block && isTextBlock(block)) {
       const blockInstance = blockManager.getBlock(block.id)
       if (blockInstance?.component) {
@@ -39,7 +43,7 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
         component.setSelection?.({ start: textLength, end: textLength })
       }
     }
-  }, [blocks])
+  }, [])
 
   // 插入新块的方法
   const insertBlock = useCallback((blockIndex: number, newBlock: Block) => {
@@ -58,14 +62,23 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
   // 更新块的方法
   const updateBlock = useCallback((blockIndex: number, newContent: ASTNode[]) => {
     setBlocks(prevBlocks => {
-      const newBlocks = [...prevBlocks]
-      if (newBlocks[blockIndex] && isTextBlock(newBlocks[blockIndex])) {
-        const updatedBlock = {
-          ...newBlocks[blockIndex],
-          content: newContent
-        } as Block;
-        newBlocks[blockIndex] = updatedBlock;
+      // 使用更精确的更新策略，只更新变化的块
+      const targetBlock = prevBlocks[blockIndex]
+      if (!targetBlock || !isTextBlock(targetBlock)) {
+        return prevBlocks
       }
+
+      // 检查内容是否真的发生了变化
+      const currentContent = targetBlock.content as ASTNode[]
+      if (JSON.stringify(currentContent) === JSON.stringify(newContent)) {
+        return prevBlocks
+      }
+
+      const newBlocks = [...prevBlocks]
+      newBlocks[blockIndex] = {
+        ...targetBlock,
+        content: newContent
+      } as Block
       return newBlocks
     })
   }, [])
@@ -83,7 +96,8 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
 
   // 合并当前block到上一个textBlock的方法
   const mergeWithPreviousBlock = useCallback((currentIndex: number, currentContent: ASTNode[]) => {
-    const previousIndex = findPreviousTextBlock(blocks, currentIndex)
+    const currentBlocks = blocksRef.current
+    const previousIndex = findPreviousTextBlock(currentBlocks, currentIndex)
     if (previousIndex !== -1) {
       setBlocks(prevBlocks => {
         const newBlocks = [...prevBlocks]
@@ -122,26 +136,37 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
         return newBlocks
       })
     }
-  }, [blocks])
+  }, [])
 
   // 包装 findPreviousTextBlock 以适配接口
   const wrappedFindPreviousTextBlock = useCallback((currentIndex: number) => {
-    return findPreviousTextBlock(blocks, currentIndex)
-  }, [blocks])
+    const currentBlocks = blocksRef.current
+    return findPreviousTextBlock(currentBlocks, currentIndex)
+  }, [])
+
+  // 使用useMemo创建稳定的回调函数对象
+  const stableCallbacks = useMemo(() => ({
+    onInsertBlock: insertBlock,
+    onUpdateBlock: updateBlock,
+    onDeleteBlock: deleteBlock,
+    onFindPreviousTextBlock: wrappedFindPreviousTextBlock,
+    onFocusBlockAtEnd: focusBlockAtEnd,
+    onMergeWithPreviousBlock: mergeWithPreviousBlock
+  }), [insertBlock, updateBlock, deleteBlock, wrappedFindPreviousTextBlock, focusBlockAtEnd, mergeWithPreviousBlock])
 
   return (
     <div className='page-block'>
       {blocks.map((block, index) => (
         <BlockComponent
-          key={index}
+          key={block.id}
           block={block}
           blockIndex={index}
-          onInsertBlock={insertBlock}
-          onUpdateBlock={updateBlock}
-          onDeleteBlock={deleteBlock}
-          onFindPreviousTextBlock={wrappedFindPreviousTextBlock}
-          onFocusBlockAtEnd={focusBlockAtEnd}
-          onMergeWithPreviousBlock={mergeWithPreviousBlock}
+          onInsertBlock={stableCallbacks.onInsertBlock}
+          onUpdateBlock={stableCallbacks.onUpdateBlock}
+          onDeleteBlock={stableCallbacks.onDeleteBlock}
+          onFindPreviousTextBlock={stableCallbacks.onFindPreviousTextBlock}
+          onFocusBlockAtEnd={stableCallbacks.onFocusBlockAtEnd}
+          onMergeWithPreviousBlock={stableCallbacks.onMergeWithPreviousBlock}
         />
       ))}
     </div>

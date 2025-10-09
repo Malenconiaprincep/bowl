@@ -17,7 +17,7 @@ interface BlockComponentProps {
   onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ASTNode[]) => void;
 }
 
-export default function BlockComponent({
+const BlockComponent = React.memo(function BlockComponent({
   block,
   blockIndex,
   onInsertBlock,
@@ -27,6 +27,8 @@ export default function BlockComponent({
   onFocusBlockAtEnd,
   onMergeWithPreviousBlock
 }: BlockComponentProps) {
+  // 添加调试信息来监控渲染
+  console.log(`BlockComponent ${block.id} 渲染了`)
   let component = null
 
   switch (block.type) {
@@ -64,8 +66,23 @@ export default function BlockComponent({
   }
 
   return (
-    <div key={block.id} className="block-container" data-block-index={blockIndex}>
+    <div className="block-container" data-block-index={blockIndex}>
       {component}
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  // 自定义比较函数，只有当block内容真正改变时才重新渲染
+  return (
+    prevProps.block.id === nextProps.block.id &&
+    prevProps.blockIndex === nextProps.blockIndex &&
+    JSON.stringify(prevProps.block.content) === JSON.stringify(nextProps.block.content) &&
+    prevProps.onInsertBlock === nextProps.onInsertBlock &&
+    prevProps.onUpdateBlock === nextProps.onUpdateBlock &&
+    prevProps.onDeleteBlock === nextProps.onDeleteBlock &&
+    prevProps.onFindPreviousTextBlock === nextProps.onFindPreviousTextBlock &&
+    prevProps.onFocusBlockAtEnd === nextProps.onFocusBlockAtEnd &&
+    prevProps.onMergeWithPreviousBlock === nextProps.onMergeWithPreviousBlock
+  );
+});
+
+export default BlockComponent;

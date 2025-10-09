@@ -38,6 +38,7 @@ function renderNode(node: ASTNode, key: number): React.ReactNode {
 }
 
 const ASTEditor = forwardRef<BlockComponentMethods, {
+  blockId?: string;
   initialAST: ASTNode[];
   onChange?: (ast: ASTNode[]) => void;
   blockIndex?: number;
@@ -59,23 +60,20 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
   const [ast, setAst] = useState<ASTNode[]>(initialAST);
 
   // 当initialAST变化时，更新本地状态
-  useLayoutEffect(() => {
-    setAst(initialAST);
-  }, [initialAST]);
+  // useLayoutEffect(() => {
+  //   setAst(initialAST);
+  // }, [JSON.stringify(initialAST)]);
 
   // 使用光标位置管理 hook
   const {
     selection,
     setSelection,
-    // activeCommands,
     editorRef,
     isUpdatingFromState,
     pendingSelection,
     restoreCursorPosition,
     restoreSelection,
-    checkActiveCommands,
     handleSelectionChange,
-    handleClick,
     handleCompositionStart,
     handleCompositionEnd,
     isComposing
@@ -131,9 +129,7 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
       pendingSelection.current = null;
     }
     isUpdatingFromState.current = false;
-    // 检查激活状态
-    checkActiveCommands();
-  }, [ast, restoreCursorPosition, restoreSelection, checkActiveCommands, pendingSelection, isUpdatingFromState]);
+  }, [ast, restoreCursorPosition, restoreSelection, pendingSelection, isUpdatingFromState]);
 
   // 使用文本输入处理 hook
   const { handleKeyDown } = useTextInput(
@@ -152,8 +148,6 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
     onMergeWithPreviousBlock
   );
 
-  console.log(ast, '>>>3')
-
   return (
     <div>
       <div
@@ -162,7 +156,6 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
         suppressContentEditableWarning
         onKeyDown={handleKeyDown}
         onSelect={handleSelectionChange}
-        onClick={handleClick}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         className="editor-content"
@@ -173,7 +166,6 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
       {/* <AstEditorToolbar
         ast={ast}
         selection={selection}
-        activeCommands={activeCommands}
         onUpdateAST={updateAST}
         pendingSelection={pendingSelection}
       /> */}

@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef, forwardRef } from 'react';
+import React, { useImperativeHandle, useRef, forwardRef } from 'react';
 import type { TextBlock } from '../../types/blocks';
 import type { ASTNode } from '../../types/ast';
 import type { Block } from '../../types/blocks';
@@ -7,7 +7,9 @@ import ASTEditor from '../../components/editor/AstRichTextEditor';
 import { BlockWrapper } from '../../components/BlockWrapper';
 
 interface TextBlockProps {
-  block: TextBlock;
+  block: TextBlock & {
+    id: string
+  };
   blockIndex: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
   onUpdateBlock?: (blockIndex: number, newContent: ASTNode[]) => void;
@@ -22,7 +24,7 @@ export interface TextMethods extends BlockComponentMethods {
   setSelection: (selection: { start: number; end: number }) => void;
 }
 
-const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
+const TextBlockComponent = React.memo(forwardRef<TextMethods, TextBlockProps>(({
   block,
   blockIndex,
   onInsertBlock,
@@ -59,6 +61,7 @@ const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
       ref={astEditorRef}
       initialAST={block.content}
       onChange={handleASTChange}
+      blockId={block.id}
       blockIndex={blockIndex}
       onInsertBlock={onInsertBlock}
       onDeleteBlock={onDeleteBlock}
@@ -66,6 +69,19 @@ const TextBlockComponent = forwardRef<TextMethods, TextBlockProps>(({
       onFocusBlockAtEnd={onFocusBlockAtEnd}
       onMergeWithPreviousBlock={onMergeWithPreviousBlock}
     />
+  );
+}), (prevProps, nextProps) => {
+  // 自定义比较函数，只有当block内容真正改变时才重新渲染
+  return (
+    prevProps.block.id === nextProps.block.id &&
+    prevProps.blockIndex === nextProps.blockIndex &&
+    JSON.stringify(prevProps.block.content) === JSON.stringify(nextProps.block.content) &&
+    prevProps.onInsertBlock === nextProps.onInsertBlock &&
+    prevProps.onUpdateBlock === nextProps.onUpdateBlock &&
+    prevProps.onDeleteBlock === nextProps.onDeleteBlock &&
+    prevProps.onFindPreviousTextBlock === nextProps.onFindPreviousTextBlock &&
+    prevProps.onFocusBlockAtEnd === nextProps.onFocusBlockAtEnd &&
+    prevProps.onMergeWithPreviousBlock === nextProps.onMergeWithPreviousBlock
   );
 });
 

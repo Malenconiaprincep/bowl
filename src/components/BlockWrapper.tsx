@@ -39,7 +39,7 @@ export function BlockWrapper<P extends object>(
           blockManager.removeBlock(block.id);
         }
       };
-    }, [props.block.id, props.block, props]);
+    }, [props.block.id]);
 
     return (
       <div ref={elementRef} data-block-id={props.block.id}>

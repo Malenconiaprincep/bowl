@@ -3,12 +3,12 @@ import type { EditorCommand } from "../../types/editor";
 import type { Mark, Selection } from "../../utils";
 import { EditorToolbar } from "../toolbar/EditorToolbar";
 import { applyFormatToSelection, getTextNodes, findNodeAndOffsetBySelectionOffset, hasSelection } from "../../utils";
+import { useActiveCommands } from "../../hooks/useActiveCommands";
 import type { ASTNode } from "../../types/ast";
 
 interface AstEditorToolbarProps {
   ast: ASTNode[];
   selection: Selection;
-  activeCommands: string[];
   onUpdateAST: (newAST: ASTNode[]) => void;
   pendingSelection: React.MutableRefObject<Selection | null>;
 }
@@ -16,10 +16,11 @@ interface AstEditorToolbarProps {
 export const AstEditorToolbar: React.FC<AstEditorToolbarProps> = ({
   ast,
   selection,
-  activeCommands,
   onUpdateAST,
   pendingSelection
 }) => {
+  // 使用 hook 管理激活状态
+  const activeCommands = useActiveCommands(ast, selection);
   // 执行格式化命令
   const executeCommand = useCallback((mark: Mark) => {
     if (hasSelection(selection)) {

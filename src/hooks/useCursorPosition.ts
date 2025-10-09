@@ -8,7 +8,6 @@ export function useCursorPosition(ast: ASTNode[]) {
     start: 0,
     end: 0
   });
-  const [activeCommands, setActiveCommands] = useState<string[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromState = useRef(false);
   const pendingSelection = useRef<Selection | null>(null);
@@ -100,18 +99,6 @@ export function useCursorPosition(ast: ASTNode[]) {
     }
   }, [ast]);
 
-  // 检查当前光标位置的激活状态
-  const checkActiveCommands = useCallback(() => {
-    const textNodes = getTextNodes(ast);
-    const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
-    const currentTextNode = textNodes[nodeIndex];
-
-    if (currentTextNode && currentTextNode.marks) {
-      setActiveCommands(currentTextNode.marks);
-    } else {
-      setActiveCommands([]);
-    }
-  }, [ast, selection.start]);
 
   // 处理选区变化
   const handleSelectionChange = useCallback(() => {
@@ -158,25 +145,9 @@ export function useCursorPosition(ast: ASTNode[]) {
         end: cursorPos
       });
 
-      // 检查激活状态
-      setTimeout(() => {
-        const textNodes = getTextNodes(ast);
-        const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, cursorPos);
-        const currentTextNode = textNodes[nodeIndex];
-
-        if (currentTextNode && currentTextNode.marks) {
-          setActiveCommands(currentTextNode.marks);
-        } else {
-          setActiveCommands([]);
-        }
-      }, 0);
     }
   }, [ast]);
 
-  // 处理点击事件
-  const handleClick = useCallback(() => {
-    handleSelectionChange();
-  }, [handleSelectionChange]);
 
   // 处理组合输入开始
   const handleCompositionStart = useCallback(() => {
@@ -197,16 +168,12 @@ export function useCursorPosition(ast: ASTNode[]) {
   return {
     selection,
     setSelection,
-    activeCommands,
-    setActiveCommands,
     editorRef,
     isUpdatingFromState,
     pendingSelection,
     restoreCursorPosition,
     restoreSelection,
-    checkActiveCommands,
     handleSelectionChange,
-    handleClick,
     handleCompositionStart,
     handleCompositionEnd,
     isComposing
