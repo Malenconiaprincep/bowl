@@ -695,8 +695,17 @@ describe('splitTextAtCursor', () => {
 
     const result = splitTextAtCursor(ast, selection);
 
-    // 前面的 AST 应该包含后续节点（空文本节点被清理了）
-    expect(result.beforeAST).toHaveLength(0);
+    // 前面的 AST 应该包含一个空的段落
+    expect(result.beforeAST).toHaveLength(1);
+    const beforeElement = result.beforeAST[0] as ElementNode;
+    expect(beforeElement.type).toBe('element');
+    expect(beforeElement.tag).toBe('p');
+    expect(beforeElement.children).toHaveLength(1);
+    expect(beforeElement.children[0]).toEqual({
+      type: 'text',
+      value: '',
+      marks: undefined
+    });
 
     // 后面的 AST 应该包含 "Hello " 文本
     expect(result.afterAST).toHaveLength(1);

@@ -191,12 +191,29 @@ export function useTextInput(
 
         // 将afterAST插入到PageBlock的新位置
         if (blockIndex !== undefined && onInsertBlock) {
-          // 如果afterAST为空，创建一个包含空P标签的段落
-          const contentToInsert = afterAST.length > 0 ? afterAST : [{
-            type: "element" as const,
-            tag: "p" as const,
-            children: [{ type: "text" as const, value: "" }]
-          }];
+          let contentToInsert: ASTNode[];
+
+          if (afterAST.length > 0) {
+            // 检查afterAST是否已经有段落结构
+            const hasParagraph = afterAST.some(node => node.type === 'element' && node.tag === 'p');
+            if (hasParagraph) {
+              contentToInsert = afterAST;
+            } else {
+              // 如果没有段落结构，包装在段落中
+              contentToInsert = [{
+                type: "element" as const,
+                tag: "p" as const,
+                children: afterAST
+              }];
+            }
+          } else {
+            // 如果afterAST为空，创建一个包含空P标签的段落
+            contentToInsert = [{
+              type: "element" as const,
+              tag: "p" as const,
+              children: [{ type: "text" as const, value: "" }]
+            }];
+          }
 
           const newBlock: Block = {
             type: "paragraph",

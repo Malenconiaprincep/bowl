@@ -75,6 +75,11 @@ function createBeforeASTInParagraph(
       beforeParagraph.children[targetChildIndex] = createTextNode(beforeText, targetNode.marks);
     }
 
+    // 如果 beforeText 为空且没有其他子节点，确保至少有一个空的文本节点
+    if (beforeText === '' && beforeParagraph.children.length === 0) {
+      beforeParagraph.children = [createEmptyTextNode(targetNode.marks)];
+    }
+
     beforeAST[paragraphIndex] = beforeParagraph as unknown as ASTNode;
   }
 
@@ -423,10 +428,9 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
         const node = originalAST[i];
         if (node.type === 'text' && node.value === targetNode.value && !foundTargetNode) {
           foundTargetNode = true;
-          if (before !== '') {
-            beforeAST[currentNodeIndex] = createTextNode(before, targetNode.marks);
-            currentNodeIndex++;
-          }
+          // 总是添加 before 文本，即使为空也要保留一个空的文本节点
+          beforeAST[currentNodeIndex] = createTextNode(before, targetNode.marks);
+          currentNodeIndex++;
           continue;
         }
 
@@ -439,6 +443,12 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
       }
 
       beforeAST.length = currentNodeIndex;
+
+      // 如果 beforeAST 为空，确保至少有一个空的文本节点
+      if (beforeAST.length === 0) {
+        beforeAST.push(createTextNode('', targetNode.marks));
+      }
+
       afterAST = afterNodes.length > 0 ? [createParagraphNode(afterNodes)] : [createParagraphNode([createEmptyTextNode(targetNode.marks)])];
     } else {
       // 光标在节点中间
@@ -447,7 +457,7 @@ export function splitTextAtCursor(ast: ASTNode[], selection: Selection): {
   }
 
   return {
-    beforeAST: cleanupEmptyNodes(beforeAST),
+    beforeAST: beforeAST, // 不清理 beforeAST，保持原始结构
     afterAST,
     newCursorPosition: 0
   };
