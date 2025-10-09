@@ -27,8 +27,6 @@ const BlockComponent = React.memo(function BlockComponent({
   onFocusBlockAtEnd,
   onMergeWithPreviousBlock
 }: BlockComponentProps) {
-  // 添加调试信息来监控渲染
-  console.log(`BlockComponent ${block.id} 渲染了`)
   let component = null
 
   switch (block.type) {
@@ -71,17 +69,12 @@ const BlockComponent = React.memo(function BlockComponent({
     </div>
   )
 }, (prevProps, nextProps) => {
-  // 自定义比较函数，只有当block内容真正改变时才重新渲染
+  // 简化的比较函数：由于回调函数已经通过useMemo稳定化，主要比较数据变化
   return (
     prevProps.block.id === nextProps.block.id &&
     prevProps.blockIndex === nextProps.blockIndex &&
-    JSON.stringify(prevProps.block.content) === JSON.stringify(nextProps.block.content) &&
-    prevProps.onInsertBlock === nextProps.onInsertBlock &&
-    prevProps.onUpdateBlock === nextProps.onUpdateBlock &&
-    prevProps.onDeleteBlock === nextProps.onDeleteBlock &&
-    prevProps.onFindPreviousTextBlock === nextProps.onFindPreviousTextBlock &&
-    prevProps.onFocusBlockAtEnd === nextProps.onFocusBlockAtEnd &&
-    prevProps.onMergeWithPreviousBlock === nextProps.onMergeWithPreviousBlock
+    JSON.stringify(prevProps.block.content) === JSON.stringify(nextProps.block.content)
+    // 回调函数引用已经稳定，不需要比较
   );
 });
 
