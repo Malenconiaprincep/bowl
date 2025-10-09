@@ -130,15 +130,8 @@ export function useTextInput(
     const handleBeforeInput = (e: Event) => {
       const inputEvent = e as InputEvent;
 
-      console.log('原生 beforeInput 事件:', {
-        inputType: inputEvent.inputType,
-        data: inputEvent.data,
-        isComposing: inputEvent.isComposing
-      });
-
       // 如果正在组合输入，跳过所有处理
       if (isComposing.current || inputEvent.isComposing) {
-        console.log('跳过组合输入过程中的事件');
         return;
       }
 
@@ -228,27 +221,16 @@ export function useTextInput(
     };
 
     // 处理组合输入结束事件
-    const handleCompositionEnd = (e: CompositionEvent) => {
-      console.log('组合输入结束:', {
-        data: e.data,
-        type: e.type
-      });
-
+    const handleCompositionEnd = () => {
       // 标记组合输入结束
       isComposing.current = false;
 
-      // 当组合输入结束时，将最终文本添加到我们的 AST 中
-      if (e.data) {
-        handleTextInput(e.data);
-      }
+      // 不在这里处理文本输入，让 beforeinput 事件来处理
+      // 这样可以避免重复添加文本
     };
 
     // 处理组合输入开始事件
-    const handleCompositionStart = (e: CompositionEvent) => {
-      console.log('组合输入开始:', {
-        data: e.data,
-        type: e.type
-      });
+    const handleCompositionStart = () => {
       isComposing.current = true;
     };
 
