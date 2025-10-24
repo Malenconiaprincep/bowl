@@ -154,6 +154,8 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
     onMergeWithPreviousBlock: mergeWithPreviousBlock
   }), [insertBlock, updateBlock, deleteBlock, wrappedFindPreviousTextBlock, focusBlockAtEnd, mergeWithPreviousBlock])
 
+  console.log(blocks, '>>>blocks')
+
   return (
     <div className='page-block'>
       {blocks.map((block, index) => (
