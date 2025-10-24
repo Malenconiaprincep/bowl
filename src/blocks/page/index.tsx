@@ -1,8 +1,11 @@
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { Block } from '../../types/blocks'
 import type { ASTNode } from '../../types/ast'
+import type { Selection } from '../../utils'
 import BlockComponent from '../../components/BlockComponent'
+import { AstEditorToolbar } from '../../components/editor/AstEditorToolbar'
 import { blockManager } from '../../utils/blockManager'
+import { selectionManager, type SelectionInfo } from '../../utils/selectionManager'
 import { mergeASTContent } from '../../utils/textOperations'
 import { calculateTextLength, findPreviousTextBlock, isTextBlock } from '../../utils/blockUtils'
 import type { TextMethods } from '../text'
@@ -16,8 +19,71 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks)
   const blocksRef = useRef(blocks)
 
+  // 工具栏相关状态
+  const [selectionInfo, setSelectionInfo] = useState<SelectionInfo | null>(null)
+  const pendingSelection = useRef<Selection | null>(null)
+
   // 保持blocksRef与blocks同步
   blocksRef.current = blocks
+
+  // 使用选区管理器
+  useEffect(() => {
+    const handleSelectionChange = (info: SelectionInfo | null) => {
+      if (!info) {
+        setSelectionInfo(null)
+        return
+      }
+
+      // 从blocks中获取对应的AST
+      const blockIndex = blocks.findIndex(block => block.id === info.blockId)
+      if (blockIndex === -1) {
+        setSelectionInfo(null)
+        return
+      }
+
+      const block = blocks[blockIndex]
+      if (!isTextBlock(block)) {
+        setSelectionInfo(null)
+        return
+      }
+
+      // 更新选区信息，包含实际的AST
+      setSelectionInfo({
+        ...info,
+        ast: block.content as ASTNode[]
+      })
+    }
+
+    // 注册选区管理器
+    selectionManager.register({
+      onSelectionChange: handleSelectionChange
+    })
+
+    return () => {
+      selectionManager.unregister()
+    }
+  }, [blocks])
+
+  // 处理 AST 更新
+  const handleASTUpdate = useCallback((newAST: ASTNode[]) => {
+    if (!selectionInfo) return
+
+    const blockIndex = blocks.findIndex(block => block.id === selectionInfo.blockId)
+    if (blockIndex === -1) return
+
+    // 更新对应block的内容
+    setBlocks(prevBlocks => {
+      const newBlocks = [...prevBlocks]
+      newBlocks[blockIndex] = {
+        ...newBlocks[blockIndex],
+        content: newAST
+      } as Block
+      return newBlocks
+    })
+
+    // 更新选区管理器中的AST信息
+    selectionManager.updateSelectionInfo(selectionInfo.blockId, newAST)
+  }, [selectionInfo, blocks])
 
   // 聚焦到指定 block 的辅助函数
   const focusBlock = useCallback((blockId: string) => {
@@ -171,6 +237,27 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
           onMergeWithPreviousBlock={stableCallbacks.onMergeWithPreviousBlock}
         />
       ))}
+
+      {/* 单例工具栏组件 */}
+      {selectionInfo && (
+        <div
+          className="floating-toolbar"
+          style={{
+            position: 'absolute',
+            left: selectionInfo.position.x,
+            top: selectionInfo.position.y,
+            zIndex: 1000,
+            transform: 'translateX(-50%)'
+          }}
+        >
+          <AstEditorToolbar
+            ast={selectionInfo.ast}
+            selection={selectionInfo.selection}
+            onUpdateAST={handleASTUpdate}
+            pendingSelection={pendingSelection}
+          />
+        </div>
+      )}
     </div>
   )
 }

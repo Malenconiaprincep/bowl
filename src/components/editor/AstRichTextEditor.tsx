@@ -4,7 +4,7 @@ import type { Block } from "../../types/blocks";
 import type { BlockComponentMethods } from "../../types/blockComponent";
 import { useCursorPosition } from "../../hooks/useCursorPosition";
 import { useTextInput } from "../../hooks/useTextInput";
-import { AstEditorToolbar } from "./AstEditorToolbar";
+// import { AstEditorToolbar } from "./AstEditorToolbar";
 // import { hasSelection } from "../../utils";
 import "../../styles/editor.css";
 
@@ -163,13 +163,13 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
       >
         {ast.map((node, idx) => renderNode(node, idx))}
       </div>
-
+      {/* 
       <AstEditorToolbar
         ast={ast}
         selection={selection}
         onUpdateAST={updateAST}
         pendingSelection={pendingSelection}
-      />
+      /> */}
 
       {/* <div style={{ marginTop: 10, fontSize: '12px', color: '#666' }}>
         <p>光标位置: 偏移 {selection.start}</p>
