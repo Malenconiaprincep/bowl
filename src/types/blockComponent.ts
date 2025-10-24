@@ -19,6 +19,11 @@ export interface BlockComponentMethods {
   focus: () => void;
   blur: () => void;
   getElement: () => HTMLElement | null;
+  // 格式化方法
+  applyBold?: () => void;
+  applyItalic?: () => void;
+  applyUnderline?: () => void;
+  applyStrikethrough?: () => void;
 }
 
 /**

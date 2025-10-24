@@ -22,6 +22,11 @@ interface TextBlockProps {
 export interface TextMethods extends BlockComponentMethods {
   // TODO: 后面扩展方法
   setSelection: (selection: { start: number; end: number }) => void;
+  // 格式化方法
+  applyBold: () => void;
+  applyItalic: () => void;
+  applyUnderline: () => void;
+  applyStrikethrough: () => void;
 }
 
 const TextBlockComponent = React.memo(forwardRef<TextMethods, TextBlockProps>(({
@@ -49,6 +54,19 @@ const TextBlockComponent = React.memo(forwardRef<TextMethods, TextBlockProps>(({
     },
     setSelection: (selection: { start: number; end: number }) => {
       astEditorRef.current?.setSelection?.(selection);
+    },
+    // 格式化方法
+    applyBold: () => {
+      astEditorRef.current?.applyBold?.();
+    },
+    applyItalic: () => {
+      astEditorRef.current?.applyItalic?.();
+    },
+    applyUnderline: () => {
+      astEditorRef.current?.applyUnderline?.();
+    },
+    applyStrikethrough: () => {
+      astEditorRef.current?.applyStrikethrough?.();
     }
   }));
 

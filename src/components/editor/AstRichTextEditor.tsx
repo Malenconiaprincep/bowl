@@ -4,6 +4,7 @@ import type { Block } from "../../types/blocks";
 import type { BlockComponentMethods } from "../../types/blockComponent";
 import { useCursorPosition } from "../../hooks/useCursorPosition";
 import { useTextInput } from "../../hooks/useTextInput";
+import { applyFormatToSelection, getTextNodes, findNodeAndOffsetBySelectionOffset, hasSelection } from "../../utils";
 // import { AstEditorToolbar } from "./AstEditorToolbar";
 // import { hasSelection } from "../../utils";
 import "../../styles/editor.css";
@@ -80,6 +81,41 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
     isComposing
   } = useCursorPosition(ast);
 
+  // 更新 AST 并触发回调
+  const updateAST = useCallback((newAST: ASTNode[]) => {
+    isUpdatingFromState.current = true;
+    setAst(newAST);
+    onChange?.(newAST);
+  }, [onChange, isUpdatingFromState]);
+
+  // 格式化方法
+  const applyFormat = useCallback((mark: 'b' | 'i' | 'u' | 's') => {
+    if (hasSelection(selection)) {
+      // 对选区应用格式化
+      pendingSelection.current = { ...selection };
+      const newAST = applyFormatToSelection(ast, selection, mark);
+      updateAST(newAST);
+    } else {
+      // 对当前光标位置应用格式化
+      pendingSelection.current = { ...selection };
+      const newAST = JSON.parse(JSON.stringify(ast));
+      const textNodes = getTextNodes(newAST);
+      const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
+      const targetNode = textNodes[nodeIndex];
+
+      if (targetNode) {
+        if (!targetNode.marks) targetNode.marks = [];
+        if (!targetNode.marks.includes(mark)) {
+          targetNode.marks.push(mark);
+        } else {
+          // 如果已有该格式，则移除（切换格式）
+          targetNode.marks = targetNode.marks.filter(m => m !== mark);
+        }
+        updateAST(newAST);
+      }
+    }
+  }, [ast, selection, updateAST, pendingSelection]);
+
   // 暴露聚焦方法
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -106,15 +142,13 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
         // 如果是选区，使用 restoreSelection
         restoreSelection(selection);
       }
-    }
+    },
+    // 格式化方法
+    applyBold: () => applyFormat('b'),
+    applyItalic: () => applyFormat('i'),
+    applyUnderline: () => applyFormat('u'),
+    applyStrikethrough: () => applyFormat('s')
   }));
-
-  // 更新 AST 并触发回调
-  const updateAST = useCallback((newAST: ASTNode[]) => {
-    isUpdatingFromState.current = true;
-    setAst(newAST);
-    onChange?.(newAST);
-  }, [onChange, isUpdatingFromState]);
 
   // 使用 useLayoutEffect 在 DOM 更新后立即恢复光标位置或选区
   useLayoutEffect(() => {
