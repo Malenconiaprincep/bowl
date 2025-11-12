@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { ASTNode, Selection } from '../types/ast';
+import type { ASTNode } from '../types/ast';
+import type { Selection } from '../utils';
 import { getTextNodes, findNodeAndOffsetBySelectionOffset } from '../utils';
 
 /**
