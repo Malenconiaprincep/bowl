@@ -4,93 +4,86 @@
 
 **A Notion-like block-based rich text editor built with React and TypeScript**
 
-一个类 Notion 的块级富文本编辑器，基于 React 和 TypeScript 构建
-
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.1-blue.svg)](https://reactjs.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+<div>
+  <button onclick="switchLanguage('en')" id="lang-en" style="padding: 8px 16px; margin: 0 4px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">English</button>
+  <button onclick="switchLanguage('zh')" id="lang-zh" style="padding: 8px 16px; margin: 0 4px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">中文</button>
+</div>
 
 </div>
 
 ---
 
-## 📖 简介 / Introduction
+<div id="content-en">
 
-**English:** Bowl is a modern, block-based rich text editor inspired by Notion. It provides a flexible and extensible architecture for building rich text editing experiences in React applications. The editor uses AST (Abstract Syntax Tree) as its core data structure, enabling efficient content manipulation and rendering.
+## 📖 Introduction
 
-**中文:** Bowl 是一个受 Notion 启发的现代化块级富文本编辑器。它为在 React 应用中构建富文本编辑体验提供了灵活且可扩展的架构。编辑器使用 AST（抽象语法树）作为核心数据结构，实现了高效的内容操作和渲染。
+Bowl is a modern, block-based rich text editor inspired by Notion. It provides a flexible and extensible architecture for building rich text editing experiences in React applications. The editor uses AST (Abstract Syntax Tree) as its core data structure, enabling efficient content manipulation and rendering.
 
-## ✨ 核心特性 / Core Features
+## ✨ Core Features
 
-### 🎯 Block-Based Editing / 块级编辑
+### 🎯 Block-Based Editing
 
-- **English:** Edit content in independent blocks, similar to Notion's editing experience
-- **中文:** 以独立块为单位编辑内容，类似 Notion 的编辑体验
+- Edit content in independent blocks, similar to Notion's editing experience
 
-### 📝 Rich Text Formatting / 富文本格式化
+### 📝 Rich Text Formatting
 
-- **English:** Support for bold, italic, underline, and strikethrough formatting
-- **中文:** 支持加粗、斜体、下划线和删除线格式化
+- Support for bold, italic, underline, and strikethrough formatting
 
-### 🎨 AST-Based Architecture / 基于 AST 的架构
+### 🎨 AST-Based Architecture
 
-- **English:** Uses AST as the core data structure for efficient content manipulation
-- **中文:** 使用 AST 作为核心数据结构，实现高效的内容操作
+- Uses AST as the core data structure for efficient content manipulation
 
-### ⌨️ Keyboard Shortcuts / 键盘快捷键
+### ⌨️ Keyboard Shortcuts
 
-- **English:** Full keyboard support for efficient editing
-- **中文:** 完整的键盘支持，实现高效编辑
+- Full keyboard support for efficient editing
 
-### 🔧 Extensible Design / 可扩展设计
+### 🔧 Extensible Design
 
-- **English:** Easy to add new block types and formatting options
-- **中文:** 易于添加新的块类型和格式化选项
+- Easy to add new block types and formatting options
 
-### 🎯 Smart Selection Management / 智能选区管理
+### 🎯 Smart Selection Management
 
-- **English:** Advanced selection handling with cursor position tracking
-- **中文:** 高级选区处理，支持光标位置跟踪
+- Advanced selection handling with cursor position tracking
 
-## 🚀 快速开始 / Quick Start
+## 🚀 Quick Start
 
-### 安装 / Installation
+### Installation
 
 ```bash
 npm install
 ```
 
-### 开发 / Development
+### Development
 
 ```bash
 # Start development server
-# 启动开发服务器
 npm run dev
 ```
 
-### 构建 / Build
+### Build
 
 ```bash
 # Build for production
-# 构建生产版本
 npm run build
 ```
 
-### 测试 / Testing
+### Testing
 
 ```bash
 # Run tests
-# 运行测试
 npm test
 
 # Run tests with coverage
-# 运行测试并生成覆盖率报告
 npm run test:coverage
 ```
 
-## 📚 使用方法 / Usage
+## 📚 Usage
 
-### 基础示例 / Basic Example
+### Basic Example
 
 ```tsx
 import ASTEditor from "./components/editor/AstRichTextEditor"
@@ -117,7 +110,7 @@ function App() {
 }
 ```
 
-### 块级编辑器示例 / Block Editor Example
+### Block Editor Example
 
 ```tsx
 import PageBlock from "./blocks/page"
@@ -142,7 +135,227 @@ function App() {
 }
 ```
 
-## 🏗️ 项目结构 / Project Structure
+## 🏗️ Project Structure
+
+```
+src/
+├── components/          # React Components
+│   ├── editor/         # Editor Components
+│   │   ├── AstRichTextEditor.tsx    # AST Editor Core Component
+│   │   └── AstEditorToolbar.tsx     # Editor Toolbar
+│   ├── BlockComponent.tsx           # Block Component
+│   └── BlockWrapper.tsx             # Block Wrapper
+├── blocks/             # Block Type Implementations
+│   ├── page/           # Page Block
+│   ├── text/           # Text Block
+│   └── image/          # Image Block
+├── hooks/              # React Hooks
+│   ├── useCursorPosition.ts         # Cursor Position Management
+│   ├── useTextInput.ts              # Text Input Handling
+│   └── useActiveCommands.ts         # Command Management
+├── types/              # TypeScript Type Definitions
+│   ├── ast.ts          # AST Types
+│   ├── blocks.ts       # Block Types
+│   └── editor.ts       # Editor Types
+├── utils/              # Utility Functions
+│   ├── core.ts         # Core Utilities
+│   ├── formatting.ts   # Formatting Utilities
+│   ├── selection.ts    # Selection Utilities
+│   └── textOperations.ts # Text Operations
+└── styles/             # Style Files
+    ├── editor.css      # Editor Styles
+    └── toolbar.css     # Toolbar Styles
+```
+
+## 🎯 Core Concepts
+
+### AST Structure
+
+The editor uses AST to represent document structure:
+
+```typescript
+type ASTNode =
+  | { type: "text"; value: string; marks?: Mark[] }
+  | { type: "element"; tag: ElementTag; children: ASTNode[] }
+
+type Mark = "b" | "i" | "u" | "s" // bold, italic, underline, strikethrough
+```
+
+### Block Types
+
+```typescript
+type Block = {
+  id: string
+  type: "paragraph" | "heading" | "media"
+  content: ASTNode[] | string
+}
+```
+
+## 🔧 Tech Stack
+
+- **React 19.1** - UI Framework
+- **TypeScript 5.8** - Type Safety
+- **Vite** - Build Tool
+- **Vitest** - Testing Framework
+- **SCSS** - Style Preprocessor
+
+## 🛠️ Development Guide
+
+### Adding New Block Types
+
+1. Define the new block type in `src/types/blocks.ts`
+2. Create the corresponding component in `src/blocks/`
+3. Register the new block type in `src/components/BlockComponent.tsx`
+
+### Adding New Formatting Options
+
+1. Extend the `Mark` type in `src/types/ast.ts`
+2. Implement formatting logic in `src/utils/formatting.ts`
+3. Add corresponding buttons in the toolbar component
+
+## 📝 TODO
+
+- [ ] Optimize page block behavior (focus after deletion, merge logic, etc.)
+- [ ] Improve undo/redo functionality
+- [ ] Add more block types (lists, quotes, code blocks, etc.)
+- [ ] Support image upload and insertion
+- [ ] Add link functionality
+- [ ] Support table editing
+- [ ] Mobile adaptation optimization
+
+## 🤝 Contributing
+
+We welcome contributions! Please feel free to submit issues and pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- Inspired by the editing experience of [Notion](https://www.notion.so/)
+
+</div>
+
+<div id="content-zh" style="display: none;">
+
+## 📖 简介
+
+Bowl 是一个受 Notion 启发的现代化块级富文本编辑器。它为在 React 应用中构建富文本编辑体验提供了灵活且可扩展的架构。编辑器使用 AST（抽象语法树）作为核心数据结构，实现了高效的内容操作和渲染。
+
+## ✨ 核心特性
+
+### 🎯 块级编辑
+
+- 以独立块为单位编辑内容，类似 Notion 的编辑体验
+
+### 📝 富文本格式化
+
+- 支持加粗、斜体、下划线和删除线格式化
+
+### 🎨 基于 AST 的架构
+
+- 使用 AST 作为核心数据结构，实现高效的内容操作
+
+### ⌨️ 键盘快捷键
+
+- 完整的键盘支持，实现高效编辑
+
+### 🔧 可扩展设计
+
+- 易于添加新的块类型和格式化选项
+
+### 🎯 智能选区管理
+
+- 高级选区处理，支持光标位置跟踪
+
+## 🚀 快速开始
+
+### 安装
+
+```bash
+npm install
+```
+
+### 开发
+
+```bash
+# 启动开发服务器
+npm run dev
+```
+
+### 构建
+
+```bash
+# 构建生产版本
+npm run build
+```
+
+### 测试
+
+```bash
+# 运行测试
+npm test
+
+# 运行测试并生成覆盖率报告
+npm run test:coverage
+```
+
+## 📚 使用方法
+
+### 基础示例
+
+```tsx
+import ASTEditor from "./components/editor/AstRichTextEditor"
+import type { ASTNode } from "./types/ast"
+
+function App() {
+  const initialAST: ASTNode[] = [
+    {
+      type: "element",
+      tag: "p",
+      children: [
+        { type: "text", value: "Hello " },
+        { type: "text", value: "world", marks: ["b"] },
+        { type: "text", value: "! " },
+      ],
+    },
+  ]
+
+  const handleASTChange = (newAST: ASTNode[]) => {
+    console.log("AST updated:", newAST)
+  }
+
+  return <ASTEditor initialAST={initialAST} onChange={handleASTChange} />
+}
+```
+
+### 块级编辑器示例
+
+```tsx
+import PageBlock from "./blocks/page"
+import type { Block } from "./types/blocks"
+
+function App() {
+  const initialBlocks: Block[] = [
+    {
+      id: "1",
+      type: "paragraph",
+      content: [
+        {
+          type: "element",
+          tag: "p",
+          children: [{ type: "text", value: "Welcome to Bowl Editor" }],
+        },
+      ],
+    },
+  ]
+
+  return <PageBlock initialBlocks={initialBlocks} />
+}
+```
+
+## 🏗️ 项目结构
 
 ```
 src/
@@ -174,9 +387,9 @@ src/
     └── toolbar.css     # 工具栏样式
 ```
 
-## 🎯 核心概念 / Core Concepts
+## 🎯 核心概念
 
-### AST 结构 / AST Structure
+### AST 结构
 
 编辑器使用 AST 来表示文档结构：
 
@@ -188,7 +401,7 @@ type ASTNode =
 type Mark = "b" | "i" | "u" | "s" // bold, italic, underline, strikethrough
 ```
 
-### 块类型 / Block Types
+### 块类型
 
 ```typescript
 type Block = {
@@ -198,7 +411,7 @@ type Block = {
 }
 ```
 
-## 🔧 技术栈 / Tech Stack
+## 🔧 技术栈
 
 - **React 19.1** - UI 框架
 - **TypeScript 5.8** - 类型安全
@@ -206,21 +419,21 @@ type Block = {
 - **Vitest** - 测试框架
 - **SCSS** - 样式预处理
 
-## 🛠️ 开发指南 / Development Guide
+## 🛠️ 开发指南
 
-### 添加新的块类型 / Adding New Block Types
+### 添加新的块类型
 
 1. 在 `src/types/blocks.ts` 中定义新的块类型
 2. 在 `src/blocks/` 中创建对应的组件
 3. 在 `src/components/BlockComponent.tsx` 中注册新块类型
 
-### 添加新的格式化选项 / Adding New Formatting Options
+### 添加新的格式化选项
 
 1. 在 `src/types/ast.ts` 中扩展 `Mark` 类型
 2. 在 `src/utils/formatting.ts` 中实现格式化逻辑
 3. 在工具栏组件中添加对应的按钮
 
-## 📝 待办事项 / TODO
+## 📝 待办事项
 
 - [ ] 优化页面块的行为（删除后聚焦、合并逻辑等）
 - [ ] 完善撤销/重做功能
@@ -230,22 +443,19 @@ type Block = {
 - [ ] 支持表格编辑
 - [ ] 移动端适配优化
 
-## 🤝 贡献 / Contributing
+## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
-We welcome contributions! Please feel free to submit issues and pull requests.
-
-## 📄 许可证 / License
+## 📄 许可证
 
 本项目采用 MIT 许可证。
 
-This project is licensed under the MIT License.
-
-## 🙏 致谢 / Acknowledgments
+## 🙏 致谢
 
 - 受 [Notion](https://www.notion.so/) 的编辑体验启发
-- Inspired by the editing experience of [Notion](https://www.notion.so/)
+
+</div>
 
 ---
 
@@ -254,3 +464,44 @@ This project is licensed under the MIT License.
 Made with ❤️ by the Bowl Editor team
 
 </div>
+
+<script>
+(function() {
+  // Get language from localStorage or default to 'en'
+  const savedLang = localStorage.getItem('bowl-readme-lang') || 'en';
+  
+  function switchLanguage(lang) {
+    const enContent = document.getElementById('content-en');
+    const zhContent = document.getElementById('content-zh');
+    const enBtn = document.getElementById('lang-en');
+    const zhBtn = document.getElementById('lang-zh');
+    
+    if (lang === 'en') {
+      enContent.style.display = 'block';
+      zhContent.style.display = 'none';
+      enBtn.style.background = '#007bff';
+      zhBtn.style.background = '#6c757d';
+    } else {
+      enContent.style.display = 'none';
+      zhContent.style.display = 'block';
+      enBtn.style.background = '#6c757d';
+      zhBtn.style.background = '#007bff';
+    }
+    
+    // Save preference
+    localStorage.setItem('bowl-readme-lang', lang);
+  }
+  
+  // Make function global
+  window.switchLanguage = switchLanguage;
+  
+  // Apply saved language on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      switchLanguage(savedLang);
+    });
+  } else {
+    switchLanguage(savedLang);
+  }
+})();
+</script>
