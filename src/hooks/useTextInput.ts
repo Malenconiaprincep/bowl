@@ -221,12 +221,11 @@ export function useTextInput(
     };
 
     // 处理组合输入结束事件
-    const handleCompositionEnd = () => {
+    const handleCompositionEnd = (e: CompositionEvent) => {
       // 标记组合输入结束
       isComposing.current = false;
 
-      // 不在这里处理文本输入，让 beforeinput 事件来处理
-      // 这样可以避免重复添加文本
+      handleTextInput(e.data)
     };
 
     // 处理组合输入开始事件

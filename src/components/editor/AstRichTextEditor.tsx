@@ -189,6 +189,8 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
+        // TODO: hack 方式解决组合输入时，光标位置不正确的问题
+        key={JSON.stringify(ast)}
         onKeyDown={handleKeyDown}
         onSelect={handleSelectionChange}
         onCompositionStart={handleCompositionStart}
