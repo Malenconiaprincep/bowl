@@ -3,20 +3,23 @@ import type { Block } from '../../types/blocks'
 import type { ContentNode } from '../../types/ast'
 import BlockComponent from '../../components/BlockComponent'
 import { ContentEditorToolbar } from '../../components/editor/ContentEditorToolbar'
+import { RemoteCursorIndicator } from '../../components/RemoteCursor'
 import { blockManager } from '../../utils/blockManager'
 import { selectionManager, type SelectionInfo } from '../../utils/selectionManager'
 import { mergeContent } from '../../utils/textOperations'
 import { calculateTextLength, findPreviousTextBlock, isTextBlock } from '../../utils/blockUtils'
 import type { TextMethods } from '../text'
-import type { BlockAction } from '../../hooks/useYjs'
+import type { BlockAction, RemoteCursor } from '../../hooks/useYjs'
 import './style.scss'
 
 interface PageBlockProps {
   blocks: Block[]
   dispatch: (action: BlockAction) => void
+  remoteCursors?: RemoteCursor[]
+  onBlockFocus?: (blockId: string | null) => void
 }
 
-export default function PageBlock({ blocks, dispatch }: PageBlockProps) {
+export default function PageBlock({ blocks, dispatch, remoteCursors = [], onBlockFocus }: PageBlockProps) {
   const blocksRef = useRef(blocks)
 
   // 工具栏相关状态
@@ -25,6 +28,37 @@ export default function PageBlock({ blocks, dispatch }: PageBlockProps) {
 
   // 保持blocksRef与blocks同步
   blocksRef.current = blocks
+
+  // 监听 block 聚焦事件
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement
+      // 查找最近的带有 data-block-id 的元素
+      const blockElement = target.closest('[data-block-id]')
+      if (blockElement) {
+        const blockId = blockElement.getAttribute('data-block-id')
+        if (blockId) {
+          onBlockFocus?.(blockId)
+        }
+      }
+    }
+
+    const handleFocusOut = (e: FocusEvent) => {
+      // 检查焦点是否离开了所有 block
+      const relatedTarget = e.relatedTarget as HTMLElement
+      if (!relatedTarget || !relatedTarget.closest('[data-block-id]')) {
+        onBlockFocus?.(null)
+      }
+    }
+
+    document.addEventListener('focusin', handleFocusIn)
+    document.addEventListener('focusout', handleFocusOut)
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn)
+      document.removeEventListener('focusout', handleFocusOut)
+    }
+  }, [onBlockFocus])
 
   // 使用选区管理器
   useEffect(() => {
@@ -200,20 +234,27 @@ export default function PageBlock({ blocks, dispatch }: PageBlockProps) {
 
   console.log(blocks, '>>>blocks')
 
+  // 获取某个 block 的远程光标
+  const getCursorsForBlock = useCallback((blockId: string) => {
+    return remoteCursors.filter(cursor => cursor.blockId === blockId)
+  }, [remoteCursors])
+
   return (
     <div className='page-block'>
       {blocks.map((block, index) => (
-        <BlockComponent
-          key={block.id}
-          block={block}
-          blockIndex={index}
-          onInsertBlock={stableCallbacks.onInsertBlock}
-          onUpdateBlock={stableCallbacks.onUpdateBlock}
-          onDeleteBlock={stableCallbacks.onDeleteBlock}
-          onFindPreviousTextBlock={stableCallbacks.onFindPreviousTextBlock}
-          onFocusBlockAtEnd={stableCallbacks.onFocusBlockAtEnd}
-          onMergeWithPreviousBlock={stableCallbacks.onMergeWithPreviousBlock}
-        />
+        <div key={block.id} className="block-with-cursors" style={{ position: 'relative' }}>
+          <RemoteCursorIndicator cursors={getCursorsForBlock(block.id)} />
+          <BlockComponent
+            block={block}
+            blockIndex={index}
+            onInsertBlock={stableCallbacks.onInsertBlock}
+            onUpdateBlock={stableCallbacks.onUpdateBlock}
+            onDeleteBlock={stableCallbacks.onDeleteBlock}
+            onFindPreviousTextBlock={stableCallbacks.onFindPreviousTextBlock}
+            onFocusBlockAtEnd={stableCallbacks.onFocusBlockAtEnd}
+            onMergeWithPreviousBlock={stableCallbacks.onMergeWithPreviousBlock}
+          />
+        </div>
       ))}
 
       {/* 单例工具栏组件 */}

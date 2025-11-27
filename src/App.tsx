@@ -61,7 +61,7 @@ function App() {
   const [tempName, setTempName] = useState(userName);
 
   // 使用 yjs hook 管理数据，启用 WebSocket 协同
-  const { blocks, doc, dispatch, connected, users, currentUser, setUserName } = useYjs({
+  const { blocks, doc, dispatch, connected, users, currentUser, setUserName, remoteCursors, setFocusedBlock } = useYjs({
     initialBlocks,
     websocketUrl: WEBSOCKET_URL,
     roomName,
@@ -256,7 +256,12 @@ function App() {
         </div>
       </div>
 
-      <PageBlock blocks={blocks} dispatch={dispatch} />
+      <PageBlock
+        blocks={blocks}
+        dispatch={dispatch}
+        remoteCursors={remoteCursors}
+        onBlockFocus={setFocusedBlock}
+      />
     </div>
   );
 }

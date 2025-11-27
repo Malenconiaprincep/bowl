@@ -17,6 +17,14 @@ export interface UserInfo {
   color: string;
 }
 
+/** 远程用户光标信息 */
+export interface RemoteCursor {
+  userId: number;
+  userName: string;
+  userColor: string;
+  blockId: string;
+}
+
 export interface UseYjsOptions {
   initialBlocks?: Block[];
   doc?: Y.Doc;
@@ -49,6 +57,10 @@ export interface UseYjsReturn {
   currentUser: UserInfo | null;
   /** 更新当前用户昵称 */
   setUserName: (name: string) => void;
+  /** 远程用户的光标位置 */
+  remoteCursors: RemoteCursor[];
+  /** 设置当前用户聚焦的 block */
+  setFocusedBlock: (blockId: string | null) => void;
 }
 
 // 随机生成用户颜色
@@ -76,6 +88,7 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
   const [connected, setConnected] = useState(false);
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<UserInfo | null>(null);
+  const [remoteCursors, setRemoteCursors] = useState<RemoteCursor[]>([]);
 
   if (!docRef.current) {
     // 如果使用 WebSocket，先创建空文档，等同步后再决定是否添加初始内容
@@ -103,10 +116,13 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     awareness.setLocalStateField('user', localUser);
     setCurrentUser(localUser);
 
-    // 更新用户列表的函数
-    const updateUsers = () => {
+    // 更新用户列表和远程光标的函数
+    const updateUsersAndCursors = () => {
       const states = awareness.getStates();
       const userList: UserInfo[] = [];
+      const cursorList: RemoteCursor[] = [];
+      const localClientId = awareness.clientID;
+
       states.forEach((state, clientId) => {
         if (state.user) {
           userList.push({
@@ -114,15 +130,26 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
             name: state.user.name || '匿名用户',
             color: state.user.color || '#888',
           });
+
+          // 收集远程用户的光标位置（排除自己）
+          if (clientId !== localClientId && state.cursor?.blockId) {
+            cursorList.push({
+              userId: clientId,
+              userName: state.user.name || '匿名用户',
+              userColor: state.user.color || '#888',
+              blockId: state.cursor.blockId,
+            });
+          }
         }
       });
       setUsers(userList);
+      setRemoteCursors(cursorList);
     };
 
     // 监听 awareness 变化
-    awareness.on('change', updateUsers);
-    // 初始化用户列表
-    updateUsers();
+    awareness.on('change', updateUsersAndCursors);
+    // 初始化用户列表和光标
+    updateUsersAndCursors();
 
     // 监听连接状态
     provider.on('status', (event: { status: string }) => {
@@ -144,11 +171,12 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     });
 
     return () => {
-      awareness.off('change', updateUsers);
+      awareness.off('change', updateUsersAndCursors);
       provider.destroy();
       providerRef.current = null;
       setConnected(false);
       setUsers([]);
+      setRemoteCursors([]);
     };
   }, [websocketUrl, roomName, doc, initialBlocks, userName]);
 
@@ -213,6 +241,14 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     setCurrentUser(newUser);
   }, []);
 
+  // 设置当前用户聚焦的 block
+  const setFocusedBlock = useCallback((blockId: string | null) => {
+    const provider = providerRef.current;
+    if (!provider) return;
+
+    provider.awareness.setLocalStateField('cursor', blockId ? { blockId } : null);
+  }, []);
+
   return {
     doc,
     blocks,
@@ -222,6 +258,8 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     users,
     currentUser,
     setUserName,
+    remoteCursors,
+    setFocusedBlock,
   };
 }
 
