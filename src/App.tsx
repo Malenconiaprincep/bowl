@@ -6,7 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { useYjs } from "./hooks/useYjs";
 
 // WebSocket 服务器配置
-const WEBSOCKET_URL = 'ws://localhost:1234';
+// 生产环境使用 Render 部署的服务，开发环境使用本地服务
+const WEBSOCKET_URL = import.meta.env.PROD
+  ? 'wss://bowl-yjs.onrender.com'  // 生产环境（注意是 wss://）
+  : 'ws://localhost:1234';          // 开发环境
 
 // 从 URL 参数获取房间名，如果没有则生成一个新的
 function getRoomFromUrl(): string {
