@@ -1,0 +1,24 @@
+# Render 部署配置
+# 使用方法:
+# 1. 将 server 目录推送到 GitHub 仓库
+# 2. 在 Render Dashboard 创建新的 Web Service
+# 3. 连接你的 GitHub 仓库
+# 4. 选择 server 目录作为根目录
+
+services:
+  - type: web
+    name: bowl-yjs-server
+    runtime: node
+    region: singapore  # 选择离你最近的区域
+    plan: free         # 可选: free, starter, standard, pro
+    rootDir: server    # 如果是独立仓库，移除此行
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+    autoDeploy: true   # 推送时自动部署
+

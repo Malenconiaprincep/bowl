@@ -1,0 +1,20 @@
+{
+  "name": "bowl-yjs-server",
+  "version": "1.0.0",
+  "description": "Y-WebSocket server for Bowl editor collaboration",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "y-websocket": "^2.1.0",
+    "yjs": "^13.6.18",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
