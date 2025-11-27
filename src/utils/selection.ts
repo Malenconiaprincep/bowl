@@ -1,4 +1,4 @@
-import type { ASTNode, TextNode } from "../types/ast";
+import type { ContentNode, TextNode } from "../types/ast";
 import { getTextNodes } from "./core";
 
 // 光标位置信息 - 使用全局字符偏移量
@@ -43,9 +43,9 @@ export function isValidSelection(selection: Selection, textNodes: TextNode[]): b
 }
 
 // 建立 DOM 节点到文本节点的映射
-export function buildNodeMapping(container: HTMLElement, ast: ASTNode[]): NodeMapping[] {
+export function buildNodeMapping(container: HTMLElement, content: ContentNode[]): NodeMapping[] {
   const mappings: NodeMapping[] = [];
-  const textNodes = getTextNodes(ast);
+  const textNodes = getTextNodes(content);
   let textNodeIndex = 0;
 
   function traverseDOM(node: Node) {
@@ -110,9 +110,9 @@ export function calculateSelectionOffset(textNodes: TextNode[], nodeIndex: numbe
 
 
 // 根据 DOM 位置找到对应的 selectionOffset
-export function findSelectionOffsetFromDOM(container: HTMLElement, ast: ASTNode[], domNode: Node, offset: number): number {
-  const mappings = buildNodeMapping(container, ast);
-  const textNodes = getTextNodes(ast);
+export function findSelectionOffsetFromDOM(container: HTMLElement, content: ContentNode[], domNode: Node, offset: number): number {
+  const mappings = buildNodeMapping(container, content);
+  const textNodes = getTextNodes(content);
 
   for (const mapping of mappings) {
     if (mapping.domNode === domNode) {

@@ -1,9 +1,9 @@
 import React, { useImperativeHandle, useRef, forwardRef } from 'react';
 import type { TextBlock } from '../../types/blocks';
-import type { ASTNode } from '../../types/ast';
+import type { ContentNode } from '../../types/ast';
 import type { Block } from '../../types/blocks';
 import type { BlockComponentMethods } from '../../types/blockComponent';
-import ASTEditor from '../../components/editor/AstRichTextEditor';
+import RichTextEditor from '../../components/editor/RichTextEditor';
 import { BlockWrapper } from '../../components/BlockWrapper';
 
 interface TextBlockProps {
@@ -12,11 +12,11 @@ interface TextBlockProps {
   };
   blockIndex: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
-  onUpdateBlock?: (blockIndex: number, newContent: ASTNode[]) => void;
+  onUpdateBlock?: (blockIndex: number, newContent: ContentNode[]) => void;
   onDeleteBlock?: (blockIndex: number) => void;
   onFindPreviousTextBlock?: (currentIndex: number) => number;
   onFocusBlockAtEnd?: (blockIndex: number) => void;
-  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ASTNode[]) => void;
+  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ContentNode[]) => void;
 }
 
 export interface TextMethods extends BlockComponentMethods {
@@ -39,46 +39,46 @@ const TextBlockComponent = React.memo(forwardRef<TextMethods, TextBlockProps>(({
   onFocusBlockAtEnd,
   onMergeWithPreviousBlock
 }, ref) => {
-  const astEditorRef = useRef<TextMethods>(null);
+  const editorRef = useRef<TextMethods>(null);
 
-  // 暴露聚焦方法，直接转发到 ASTEditor
+  // 暴露聚焦方法，直接转发到 RichTextEditor
   useImperativeHandle(ref, () => ({
     focus: () => {
-      astEditorRef.current?.focus();
+      editorRef.current?.focus();
     },
     blur: () => {
-      astEditorRef.current?.blur();
+      editorRef.current?.blur();
     },
     getElement: () => {
-      return astEditorRef.current?.getElement() || null;
+      return editorRef.current?.getElement() || null;
     },
     setSelection: (selection: { start: number; end: number }) => {
-      astEditorRef.current?.setSelection?.(selection);
+      editorRef.current?.setSelection?.(selection);
     },
     // 格式化方法
     applyBold: () => {
-      astEditorRef.current?.applyBold?.();
+      editorRef.current?.applyBold?.();
     },
     applyItalic: () => {
-      astEditorRef.current?.applyItalic?.();
+      editorRef.current?.applyItalic?.();
     },
     applyUnderline: () => {
-      astEditorRef.current?.applyUnderline?.();
+      editorRef.current?.applyUnderline?.();
     },
     applyStrikethrough: () => {
-      astEditorRef.current?.applyStrikethrough?.();
+      editorRef.current?.applyStrikethrough?.();
     }
   }));
 
-  const handleASTChange = (newAST: ASTNode[]) => {
-    onUpdateBlock?.(blockIndex, newAST);
+  const handleContentChange = (newContent: ContentNode[]) => {
+    onUpdateBlock?.(blockIndex, newContent);
   };
 
   return (
-    <ASTEditor
-      ref={astEditorRef}
-      initialAST={block.content}
-      onChange={handleASTChange}
+    <RichTextEditor
+      ref={editorRef}
+      initialContent={block.content}
+      onChange={handleContentChange}
       blockId={block.id}
       blockIndex={blockIndex}
       onInsertBlock={onInsertBlock}

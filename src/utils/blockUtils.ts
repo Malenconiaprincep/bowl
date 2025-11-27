@@ -1,12 +1,12 @@
-import type { ASTNode } from '../types/ast'
+import type { ContentNode } from '../types/ast'
 import type { Block } from '../types/blocks'
 
 /**
- * 计算AST中文本长度的辅助函数
+ * 计算内容中文本长度的辅助函数
  */
-export const calculateTextLength = (ast: ASTNode[]): number => {
+export const calculateTextLength = (content: ContentNode[]): number => {
   let length = 0
-  for (const node of ast) {
+  for (const node of content) {
     if (node.type === 'text') {
       length += node.value.length
     } else if (node.type === 'element') {
@@ -19,9 +19,9 @@ export const calculateTextLength = (ast: ASTNode[]): number => {
 /**
  * 提取文本内容的辅助函数
  */
-export const extractTextContent = (ast: ASTNode[]): string => {
+export const extractTextContent = (content: ContentNode[]): string => {
   let text = ''
-  for (const node of ast) {
+  for (const node of content) {
     if (node.type === 'text') {
       text += node.value
     } else if (node.type === 'element' && node.children) {

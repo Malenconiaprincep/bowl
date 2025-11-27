@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect } from "react";
-import type { ASTNode } from "../types/ast";
+import type { ContentNode } from "../types/ast";
 import type { Block } from "../types/blocks";
 import type { Selection } from "../utils";
 import { insertTextAtSelection, deleteSelection, splitTextAtCursor } from "../utils";
 import { v4 as uuidv4 } from 'uuid';
 
-// 检查AST是否为空内容（只有空的段落或没有文本内容）
-function isEmptyContent(ast: ASTNode[]): boolean {
-  if (ast.length === 0) return true;
+// 检查内容是否为空（只有空的段落或没有文本内容）
+function isEmptyContent(content: ContentNode[]): boolean {
+  if (content.length === 0) return true;
 
-  for (const node of ast) {
+  for (const node of content) {
     if (node.type === 'text' && node.value.trim() !== '') {
       return false;
     }
@@ -26,9 +26,9 @@ function isEmptyContent(ast: ASTNode[]): boolean {
 }
 
 export function useTextInput(
-  ast: ASTNode[],
+  content: ContentNode[],
   setSelection: (selection: Selection) => void,
-  onUpdateAST: (newAST: ASTNode[]) => void,
+  onUpdateContent: (newContent: ContentNode[]) => void,
   pendingSelection: React.MutableRefObject<Selection | null>,
   selection: Selection,
   editorRef: React.RefObject<HTMLDivElement | null>,
@@ -38,27 +38,27 @@ export function useTextInput(
   onDeleteBlock?: (blockIndex: number) => void,
   onFindPreviousTextBlock?: (currentIndex: number) => number,
   onFocusBlockAtEnd?: (blockIndex: number) => void,
-  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ASTNode[]) => void
+  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ContentNode[]) => void
 ) {
   // 跟踪是否已经变空的状态
   const wasEmpty = React.useRef<boolean>(false);
   // 处理文本输入
   const handleTextInput = useCallback((text: string) => {
-    const { newAST, newCursorPosition } = insertTextAtSelection(ast, selection, text);
+    const { newContent, newCursorPosition } = insertTextAtSelection(content, selection, text);
 
     // 更新wasEmpty状态
-    wasEmpty.current = isEmptyContent(newAST);
+    wasEmpty.current = isEmptyContent(newContent);
 
     // 设置待恢复的光标位置
     const newSelection = { start: newCursorPosition, end: newCursorPosition };
     pendingSelection.current = newSelection;
     setSelection(newSelection);
 
-    onUpdateAST(newAST);
-  }, [ast, selection, setSelection, onUpdateAST, pendingSelection]);
+    onUpdateContent(newContent);
+  }, [content, selection, setSelection, onUpdateContent, pendingSelection]);
 
   // 创建空的段落结构
-  const createEmptyParagraph = useCallback((): ASTNode[] => {
+  const createEmptyParagraph = useCallback((): ContentNode[] => {
     return [{
       type: "element",
       tag: "p",
@@ -68,10 +68,10 @@ export function useTextInput(
 
   // 处理删除操作
   const handleDelete = useCallback(() => {
-    const { newAST, newCursorPosition } = deleteSelection(ast, selection);
+    const { newContent, newCursorPosition } = deleteSelection(content, selection);
 
     // 检查是否已经变空且删除后仍然为空内容
-    if (wasEmpty.current && isEmptyContent(newAST) && blockIndex !== undefined && onDeleteBlock && onFindPreviousTextBlock && onFocusBlockAtEnd) {
+    if (wasEmpty.current && isEmptyContent(newContent) && blockIndex !== undefined && onDeleteBlock && onFindPreviousTextBlock && onFocusBlockAtEnd) {
       // 查找上一个textBlock
       const previousTextBlockIndex = onFindPreviousTextBlock(blockIndex);
 
@@ -92,13 +92,13 @@ export function useTextInput(
 
       if (previousTextBlockIndex !== -1) {
         // 合并当前block到上一个textBlock
-        onMergeWithPreviousBlock(blockIndex, ast);
+        onMergeWithPreviousBlock(blockIndex, content);
         return;
       }
     }
 
     // 如果内容变空，保留空的段落结构
-    if (isEmptyContent(newAST)) {
+    if (isEmptyContent(newContent)) {
       const emptyParagraph = createEmptyParagraph();
       wasEmpty.current = true;
 
@@ -107,20 +107,20 @@ export function useTextInput(
       pendingSelection.current = newSelection;
       setSelection(newSelection);
 
-      onUpdateAST(emptyParagraph);
+      onUpdateContent(emptyParagraph);
       return;
     }
 
     // 更新wasEmpty状态
-    wasEmpty.current = isEmptyContent(newAST);
+    wasEmpty.current = isEmptyContent(newContent);
 
     // 设置待恢复的光标位置
     const newSelection = { start: newCursorPosition, end: newCursorPosition };
     pendingSelection.current = newSelection;
     setSelection(newSelection);
 
-    onUpdateAST(newAST);
-  }, [ast, selection, setSelection, onUpdateAST, pendingSelection, blockIndex, onDeleteBlock, onFindPreviousTextBlock, onFocusBlockAtEnd, onMergeWithPreviousBlock, createEmptyParagraph]);
+    onUpdateContent(newContent);
+  }, [content, selection, setSelection, onUpdateContent, pendingSelection, blockIndex, onDeleteBlock, onFindPreviousTextBlock, onFocusBlockAtEnd, onMergeWithPreviousBlock, createEmptyParagraph]);
 
   // 使用原生事件监听器处理 beforeInput
   useEffect(() => {
@@ -172,35 +172,35 @@ export function useTextInput(
         e.preventDefault();
 
         // 回车后进行数据拆分
-        const { beforeAST, afterAST, newCursorPosition } = splitTextAtCursor(ast, selection);
+        const { beforeContent, afterContent, newCursorPosition } = splitTextAtCursor(content, selection);
 
-        // 更新当前块的AST（前面的部分）
-        onUpdateAST(beforeAST);
+        // 更新当前块的内容（前面的部分）
+        onUpdateContent(beforeContent);
 
         // 设置新的光标位置
         const newSelection = { start: newCursorPosition, end: newCursorPosition };
         pendingSelection.current = newSelection;
         setSelection(newSelection);
 
-        // 将afterAST插入到PageBlock的新位置
+        // 将afterContent插入到PageBlock的新位置
         if (blockIndex !== undefined && onInsertBlock) {
-          let contentToInsert: ASTNode[];
+          let contentToInsert: ContentNode[];
 
-          if (afterAST.length > 0) {
-            // 检查afterAST是否已经有段落结构
-            const hasParagraph = afterAST.some(node => node.type === 'element' && node.tag === 'p');
+          if (afterContent.length > 0) {
+            // 检查afterContent是否已经有段落结构
+            const hasParagraph = afterContent.some(node => node.type === 'element' && node.tag === 'p');
             if (hasParagraph) {
-              contentToInsert = afterAST;
+              contentToInsert = afterContent;
             } else {
               // 如果没有段落结构，包装在段落中
               contentToInsert = [{
                 type: "element" as const,
                 tag: "p" as const,
-                children: afterAST
+                children: afterContent
               }];
             }
           } else {
-            // 如果afterAST为空，创建一个包含空P标签的段落
+            // 如果afterContent为空，创建一个包含空P标签的段落
             contentToInsert = [{
               type: "element" as const,
               tag: "p" as const,
@@ -242,7 +242,7 @@ export function useTextInput(
       editor.removeEventListener('compositionstart', handleCompositionStart);
       editor.removeEventListener('compositionend', handleCompositionEnd);
     };
-  }, [editorRef, handleTextInput, handleDelete, isComposing, ast, onUpdateAST, pendingSelection, selection, setSelection, blockIndex, onInsertBlock, onDeleteBlock, onFindPreviousTextBlock, onFocusBlockAtEnd, onMergeWithPreviousBlock]);
+  }, [editorRef, handleTextInput, handleDelete, isComposing, content, onUpdateContent, pendingSelection, selection, setSelection, blockIndex, onInsertBlock, onDeleteBlock, onFindPreviousTextBlock, onFocusBlockAtEnd, onMergeWithPreviousBlock]);
 
   // 处理键盘事件（保留用于快捷键）
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

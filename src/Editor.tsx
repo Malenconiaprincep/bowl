@@ -1,9 +1,9 @@
 import "./App.css";
-import type { ASTNode } from "./types/ast";
-import ASTEditor from "./components/editor/AstRichTextEditor";
+import type { ContentNode } from "./types/ast";
+import RichTextEditor from "./components/editor/RichTextEditor";
 
 function App() {
-  // const initialAST: ASTNode[] = [
+  // const initialContent: ContentNode[] = [
   //   {
   //     type: "element",
   //     tag: "p",
@@ -11,12 +11,12 @@ function App() {
   //       { type: "text", value: "Hello " },
   //       { type: "text", value: "Wor", marks: ["b"] },
   //       { type: "text", value: "ld", marks: ["i", "b"] },
-  //       { type: "text", value: "! 这是一个可编辑的 AST 编辑器。" },
+  //       { type: "text", value: "! 这是一个可编辑的富文本编辑器。" },
   //     ],
   //   },
   // ];
 
-  // const initialAST: ASTNode[] = [
+  // const initialContent: ContentNode[] = [
   //   {
   //     type: "element",
   //     tag: "p",
@@ -29,7 +29,7 @@ function App() {
   //   },
   // ];
 
-  const initialAST: ASTNode[] = [
+  const initialContent: ContentNode[] = [
     {
       type: "element",
       tag: "p",
@@ -41,8 +41,8 @@ function App() {
     }
   ]
 
-  const handleASTChange = (newAST: ASTNode[]) => {
-    console.log("AST 已更新:", newAST);
+  const handleContentChange = (newContent: ContentNode[]) => {
+    console.log("内容已更新:", newContent);
   };
 
   return (
@@ -53,10 +53,10 @@ function App() {
       </header>
       <main>
         <div>
-          <h2>AST 编辑器 (直接操作 AST)</h2>
-          <p>这个编辑器直接操作 AST 数据，避免了 HTML 转换的开销！</p>
+          <h2>富文本编辑器 (直接操作内容树)</h2>
+          <p>这个编辑器直接操作内容数据，避免了 HTML 转换的开销！</p>
           <p>支持：文本输入、删除、格式化、快捷键操作</p>
-          <ASTEditor initialAST={initialAST} onChange={handleASTChange} />
+          <RichTextEditor initialContent={initialContent} onChange={handleContentChange} />
         </div>
       </main>
     </div>

@@ -11,7 +11,11 @@ export type ElementTag = "p" | "span" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 export type ElementNode = {
   type: "element";
   tag: ElementTag;
-  children: ASTNode[];
+  children: ContentNode[];
 };
 
-export type ASTNode = TextNode | ElementNode;
+// 新的推荐命名
+export type ContentNode = TextNode | ElementNode;
+
+// 保持向后兼容（测试文件使用）
+export type ASTNode = ContentNode;

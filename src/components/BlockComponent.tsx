@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Block } from "../types/blocks";
-import type { ASTNode } from "../types/ast";
+import type { ContentNode } from "../types/ast";
 
 // 使用 React.lazy 动态导入
 const TextBlock = React.lazy(() => import("../blocks/text"));
@@ -10,11 +10,11 @@ interface BlockComponentProps {
   block: Block;
   blockIndex: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
-  onUpdateBlock?: (blockIndex: number, newContent: ASTNode[]) => void;
+  onUpdateBlock?: (blockIndex: number, newContent: ContentNode[]) => void;
   onDeleteBlock?: (blockIndex: number) => void;
   onFindPreviousTextBlock?: (currentIndex: number) => number;
   onFocusBlockAtEnd?: (blockIndex: number) => void;
-  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ASTNode[]) => void;
+  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ContentNode[]) => void;
 }
 
 const BlockComponent = React.memo(function BlockComponent({

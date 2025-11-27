@@ -1,5 +1,5 @@
-import type { ASTNode, TextNode, Mark, ElementTag } from "../types/ast";
-import { cloneAST, getTextNodes, getTargetTextNode, replaceTextNodeInAST } from "./core";
+import type { ContentNode, TextNode, Mark, ElementTag } from "../types/ast";
+import { cloneContent, getTextNodes, getTargetTextNode, replaceTextNodeInContent } from "./core";
 import type { Selection } from "./selection";
 import { isValidSelection, findNodeAndOffsetBySelectionOffset, hasSelection } from "./selection";
 
@@ -18,19 +18,19 @@ function sliceText(text: string, startOffset: number, endOffset?: number): {
 
 // 应用格式化到跨节点选区
 function applyFormatToCrossNodeSelection(
-  ast: ASTNode[],
+  content: ContentNode[],
   startNodeInfo: { nodeIndex: number; textOffset: number },
   endNodeInfo: { nodeIndex: number; textOffset: number },
   mark: Mark
-): ASTNode[] {
-  const newAst = cloneAST(ast);
-  const textNodes = getTextNodes(newAst);
+): ContentNode[] {
+  const newContent = cloneContent(content);
+  const textNodes = getTextNodes(newContent);
 
   // 获取起始和结束节点
   const startNode = textNodes[startNodeInfo.nodeIndex];
   const endNode = textNodes[endNodeInfo.nodeIndex];
 
-  if (!startNode || !endNode) return newAst;
+  if (!startNode || !endNode) return newContent;
 
   // 收集选中的文本
   let selectedText = '';
@@ -106,13 +106,13 @@ function applyFormatToCrossNodeSelection(
     });
   }
 
-  // 直接构建新的 AST，保持 p 标签结构
-  const result: ASTNode[] = [];
+  // 直接构建新的内容，保持 p 标签结构
+  const result: ContentNode[] = [];
 
-  for (let i = 0; i < newAst.length; i++) {
+  for (let i = 0; i < newContent.length; i++) {
     if (i === 0) { // 假设第一个节点是 p 标签
-      const pNode = newAst[i] as { type: 'element'; tag: string; children: ASTNode[] };
-      const newChildren: ASTNode[] = [];
+      const pNode = newContent[i] as { type: 'element'; tag: string; children: ContentNode[] };
+      const newChildren: ContentNode[] = [];
 
       // 添加起始节点之前的所有子节点
       for (let j = 0; j < startNodeInfo.nodeIndex; j++) {
@@ -133,7 +133,7 @@ function applyFormatToCrossNodeSelection(
         children: newChildren
       });
     } else {
-      result.push(newAst[i]);
+      result.push(newContent[i]);
     }
   }
 
@@ -141,11 +141,11 @@ function applyFormatToCrossNodeSelection(
 }
 
 // 应用格式化到选区
-export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mark: Mark): ASTNode[] {
-  if (!hasSelection(selection)) return ast;
+export function applyFormatToSelection(content: ContentNode[], selection: Selection, mark: Mark): ContentNode[] {
+  if (!hasSelection(selection)) return content;
 
-  const newAst = cloneAST(ast);
-  const textNodes = getTextNodes(newAst);
+  const newContent = cloneContent(content);
+  const textNodes = getTextNodes(newContent);
 
   console.log('文本节点列表:', textNodes.map(node => ({
     value: node.value,
@@ -154,7 +154,7 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
 
   // 验证选区有效性
   if (!isValidSelection(selection, textNodes)) {
-    return ast;
+    return content;
   }
 
   const { start, end } = selection;
@@ -167,8 +167,8 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
 
   // 处理单个文本节点的情况
   if (startNodeInfo.nodeIndex === endNodeInfo.nodeIndex) {
-    const targetNode = getTargetTextNode(newAst, startNodeInfo.nodeIndex);
-    if (!targetNode) return newAst;
+    const targetNode = getTargetTextNode(newContent, startNodeInfo.nodeIndex);
+    if (!targetNode) return newContent;
 
     console.log('单个文本节点选区:', {
       startNodeInfo,
@@ -195,7 +195,7 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
       }
       targetNode.marks = originalMarks;
       console.log('修改后的 marks:', targetNode.marks);
-      return newAst;
+      return newContent;
     }
 
     // 创建新的文本节点
@@ -231,9 +231,9 @@ export function applyFormatToSelection(ast: ASTNode[], selection: Selection, mar
     }
 
     // 替换原节点
-    return replaceTextNodeInAST(newAst, startNodeInfo.nodeIndex, newNodes);
+    return replaceTextNodeInContent(newContent, startNodeInfo.nodeIndex, newNodes);
   } else {
     // 处理跨节点的情况
-    return applyFormatToCrossNodeSelection(newAst, startNodeInfo, endNodeInfo, mark);
+    return applyFormatToCrossNodeSelection(newContent, startNodeInfo, endNodeInfo, mark);
   }
 }

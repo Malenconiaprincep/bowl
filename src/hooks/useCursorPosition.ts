@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback } from "react";
-import type { ASTNode } from "../types/ast";
+import type { ContentNode } from "../types/ast";
 import type { Selection } from "../utils";
 import { findSelectionOffsetFromDOM, getTextNodes, findNodeAndOffsetBySelectionOffset, hasSelection } from "../utils";
 
-export function useCursorPosition(ast: ASTNode[]) {
+export function useCursorPosition(content: ContentNode[]) {
   const [selection, setSelection] = useState<Selection>({
     start: 0,
     end: 0
@@ -19,7 +19,7 @@ export function useCursorPosition(ast: ASTNode[]) {
   const restoreCursorPosition = useCallback((selection: Selection) => {
     if (!editorRef.current) return;
 
-    const textNodes = getTextNodes(ast);
+    const textNodes = getTextNodes(content);
     const { nodeIndex, textOffset } = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
     const targetNode = textNodes[nodeIndex];
 
@@ -53,13 +53,13 @@ export function useCursorPosition(ast: ASTNode[]) {
         sel?.addRange(range);
       }
     }
-  }, [ast]);
+  }, [content]);
 
   // 恢复选区
   const restoreSelection = useCallback((selection: Selection) => {
     if (!editorRef.current || !hasSelection(selection)) return;
 
-    const textNodes = getTextNodes(ast);
+    const textNodes = getTextNodes(content);
     const startNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
     const endNodeInfo = findNodeAndOffsetBySelectionOffset(textNodes, selection.end);
 
@@ -99,7 +99,7 @@ export function useCursorPosition(ast: ASTNode[]) {
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
-  }, [ast]);
+  }, [content]);
 
 
   // 处理选区变化
@@ -114,8 +114,8 @@ export function useCursorPosition(ast: ASTNode[]) {
 
     if (hasSelection) {
       // 计算选区的开始和结束位置
-      const startPosition = findSelectionOffsetFromDOM(editorRef.current, ast, range.startContainer, range.startOffset);
-      const endPosition = findSelectionOffsetFromDOM(editorRef.current, ast, range.endContainer, range.endOffset);
+      const startPosition = findSelectionOffsetFromDOM(editorRef.current, content, range.startContainer, range.startOffset);
+      const endPosition = findSelectionOffsetFromDOM(editorRef.current, content, range.endContainer, range.endOffset);
 
       console.log('选区信息:', {
         startContainer: range.startContainer,
@@ -132,7 +132,7 @@ export function useCursorPosition(ast: ASTNode[]) {
       });
     } else {
       // 计算光标位置
-      const cursorPos = findSelectionOffsetFromDOM(editorRef.current, ast, range.startContainer, range.startOffset);
+      const cursorPos = findSelectionOffsetFromDOM(editorRef.current, content, range.startContainer, range.startOffset);
 
       console.log('光标信息:', {
         container: range.startContainer,
@@ -148,7 +148,7 @@ export function useCursorPosition(ast: ASTNode[]) {
       });
 
     }
-  }, [ast]);
+  }, [content]);
 
 
   // 处理组合输入开始

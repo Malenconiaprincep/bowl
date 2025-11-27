@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { isValidSelection, buildNodeMapping, findNodeAndOffsetBySelectionOffset, calculateSelectionOffset, findSelectionOffsetFromDOM } from '../utils/selection';
-import type { TextNode, ASTNode } from '../types/ast';
+import type { TextNode, ContentNode } from '../types/ast';
 import type { Selection } from '../utils/selection';
 
 // 测试用的文本节点数据（现在使用真实AST结构）
 
-const createTestAST = (): ASTNode[] => [
+const createTestAST = (): ContentNode[] => [
   {
     type: "element",
     tag: "p",
@@ -19,10 +19,10 @@ const createTestAST = (): ASTNode[] => [
 ];
 
 // 从AST中提取文本节点的辅助函数
-const extractTextNodes = (ast: ASTNode[]): TextNode[] => {
+const extractTextNodes = (ast: ContentNode[]): TextNode[] => {
   const textNodes: TextNode[] = [];
 
-  const traverse = (nodes: ASTNode[]) => {
+  const traverse = (nodes: ContentNode[]) => {
     for (const node of nodes) {
       if (node.type === 'text') {
         textNodes.push(node);
@@ -212,7 +212,7 @@ describe('selection', () => {
     });
 
     it('应该建立 DOM 节点到文本节点的映射', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         { type: 'text', value: 'Hello ' },
         { type: 'text', value: 'world' },
         { type: 'text', value: '!' },
@@ -231,7 +231,7 @@ describe('selection', () => {
 
     it('应该处理空的容器', () => {
       const emptyContainer = document.createElement('div');
-      const ast: ASTNode[] = [];
+      const ast: ContentNode[] = [];
 
       const mappings = buildNodeMapping(emptyContainer, ast);
 
@@ -241,7 +241,7 @@ describe('selection', () => {
     it('应该处理只有元素节点的容器', () => {
       const elementContainer = document.createElement('div');
       elementContainer.innerHTML = '<div><span></span></div>';
-      const ast: ASTNode[] = [];
+      const ast: ContentNode[] = [];
 
       const mappings = buildNodeMapping(elementContainer, ast);
 
@@ -260,7 +260,7 @@ describe('selection', () => {
     });
 
     it('应该根据 DOM 位置找到对应的全局偏移量', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         { type: 'text', value: 'Hello ' },
         { type: 'text', value: 'world' },
         { type: 'text', value: '!' },
@@ -277,7 +277,7 @@ describe('selection', () => {
     });
 
     it('应该处理找不到节点的情况（返回默认值）', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         { type: 'text', value: 'Hello ' }
       ];
 
@@ -288,7 +288,7 @@ describe('selection', () => {
     });
 
     it('应该处理空 AST', () => {
-      const ast: ASTNode[] = [];
+      const ast: ContentNode[] = [];
       const firstTextNode = container.querySelector('p')?.firstChild;
       const offset = findSelectionOffsetFromDOM(container, ast, firstTextNode!, 0);
 
