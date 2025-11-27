@@ -1,11 +1,11 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { Block } from '../../types/blocks'
-import type { ASTNode } from '../../types/ast'
+import type { ContentNode } from '../../types/ast'
 import BlockComponent from '../../components/BlockComponent'
-import { AstEditorToolbar } from '../../components/editor/AstEditorToolbar'
+import { ContentEditorToolbar } from '../../components/editor/ContentEditorToolbar'
 import { blockManager } from '../../utils/blockManager'
 import { selectionManager, type SelectionInfo } from '../../utils/selectionManager'
-import { mergeASTContent } from '../../utils/textOperations'
+import { mergeContent } from '../../utils/textOperations'
 import { calculateTextLength, findPreviousTextBlock, isTextBlock } from '../../utils/blockUtils'
 import type { TextMethods } from '../text'
 import './style.scss'
@@ -34,7 +34,7 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
         return
       }
 
-      // 从blocks中获取对应的AST
+      // 从blocks中获取对应的内容
       const blockIndex = blocks.findIndex(block => block.id === info.blockId)
       if (blockIndex === -1) {
         setSelectionInfo(null)
@@ -47,10 +47,10 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
         return
       }
 
-      // 更新选区信息，包含实际的AST
+      // 更新选区信息，包含实际的内容
       setSelectionInfo({
         ...info,
-        ast: block.content as ASTNode[]
+        ast: block.content as ContentNode[]
       })
 
       // 获取当前编辑器实例
@@ -94,7 +94,7 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
         const component = blockInstance.component as unknown as TextMethods
         component.focus?.()
         // 计算文本长度并设置光标到末尾
-        const textLength = calculateTextLength(block.content as ASTNode[])
+        const textLength = calculateTextLength(block.content as ContentNode[])
         component.setSelection?.({ start: textLength, end: textLength })
       }
     }
@@ -115,7 +115,7 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
   }, [focusBlock])
 
   // 更新块的方法
-  const updateBlock = useCallback((blockIndex: number, newContent: ASTNode[]) => {
+  const updateBlock = useCallback((blockIndex: number, newContent: ContentNode[]) => {
     setBlocks(prevBlocks => {
       // 使用更精确的更新策略，只更新变化的块
       const targetBlock = prevBlocks[blockIndex]
@@ -124,7 +124,7 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
       }
 
       // 检查内容是否真的发生了变化
-      const currentContent = targetBlock.content as ASTNode[]
+      const currentContent = targetBlock.content as ContentNode[]
       if (JSON.stringify(currentContent) === JSON.stringify(newContent)) {
         return prevBlocks
       }
@@ -150,7 +150,7 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
 
 
   // 合并当前block到上一个textBlock的方法
-  const mergeWithPreviousBlock = useCallback((currentIndex: number, currentContent: ASTNode[]) => {
+  const mergeWithPreviousBlock = useCallback((currentIndex: number, currentContent: ContentNode[]) => {
     const currentBlocks = blocksRef.current
     const previousIndex = findPreviousTextBlock(currentBlocks, currentIndex)
     if (previousIndex !== -1) {
@@ -162,13 +162,13 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
         if (previousBlock && currentBlock &&
           isTextBlock(previousBlock) && isTextBlock(currentBlock)) {
 
-          // 使用mergeASTContent函数合并内容
-          const { mergedAST, newCursorPosition } = mergeASTContent(previousBlock.content as ASTNode[], currentContent)
+          // 使用mergeContent函数合并内容
+          const { mergedContent, newCursorPosition } = mergeContent(previousBlock.content as ContentNode[], currentContent)
 
-          // 使用合并后的AST更新上一个block
+          // 使用合并后的内容更新上一个block
           newBlocks[previousIndex] = {
             ...previousBlock,
-            content: mergedAST
+            content: mergedContent
           } as Block
 
           // 删除当前block
@@ -239,8 +239,8 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
             transform: 'translateX(-50%)'
           }}
         >
-          <AstEditorToolbar
-            ast={selectionInfo.ast}
+          <ContentEditorToolbar
+            content={selectionInfo.ast}
             selection={selectionInfo.selection}
             editorInstance={currentEditorInstance}
           />

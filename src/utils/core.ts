@@ -1,13 +1,13 @@
-import type { ASTNode, TextNode } from "../types/ast";
+import type { ContentNode, TextNode } from "../types/ast";
 
 // 重新导出 Mark 类型
 export type { Mark } from "../types/ast";
 
-// 获取 AST 中的文本节点列表
-export function getTextNodes(ast: ASTNode[]): TextNode[] {
+// 获取内容树中的文本节点列表
+export function getTextNodes(content: ContentNode[]): TextNode[] {
   const textNodes: TextNode[] = [];
 
-  function traverse(nodes: ASTNode[]) {
+  function traverse(nodes: ContentNode[]) {
     nodes.forEach(node => {
       if (node.type === "text") {
         textNodes.push(node);
@@ -17,32 +17,35 @@ export function getTextNodes(ast: ASTNode[]): TextNode[] {
     });
   }
 
-  traverse(ast);
+  traverse(content);
   return textNodes;
 }
 
-// AST 深拷贝
-export function cloneAST(ast: ASTNode[]): ASTNode[] {
-  return JSON.parse(JSON.stringify(ast));
+// 内容树深拷贝
+export function cloneContent(content: ContentNode[]): ContentNode[] {
+  return JSON.parse(JSON.stringify(content));
 }
 
+// 保持向后兼容
+export const cloneAST = cloneContent;
+
 // 获取目标文本节点
-export function getTargetTextNode(ast: ASTNode[], nodeIndex: number): TextNode | null {
-  const textNodes = getTextNodes(ast);
+export function getTargetTextNode(content: ContentNode[], nodeIndex: number): TextNode | null {
+  const textNodes = getTextNodes(content);
   return textNodes[nodeIndex] || null;
 }
 
-// 在 AST 中替换文本节点
-export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes: TextNode[], wrapInSpan: boolean = false): ASTNode[] {
-  const newAst = cloneAST(ast);
-  const textNodes = getTextNodes(newAst);
+// 在内容树中替换文本节点
+export function replaceTextNodeInContent(content: ContentNode[], nodeIndex: number, newNodes: TextNode[], wrapInSpan: boolean = false): ContentNode[] {
+  const newContent = cloneContent(content);
+  const textNodes = getTextNodes(newContent);
 
-  if (nodeIndex >= textNodes.length) return newAst;
+  if (nodeIndex >= textNodes.length) return newContent;
 
   // 如果只有一个新节点，直接替换
   if (newNodes.length === 1) {
     let currentIndex = 0;
-    function replaceInNode(node: ASTNode): ASTNode {
+    function replaceInNode(node: ContentNode): ContentNode {
       if (node.type === "text") {
         if (currentIndex === nodeIndex) {
           return newNodes[0];
@@ -57,17 +60,17 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
       }
       return node;
     }
-    return newAst.map(replaceInNode);
+    return newContent.map(replaceInNode);
   }
 
   // 如果有多个新节点，需要找到父级并替换整个父级
   let currentIndex = 0;
   let found = false;
-  let parentNode: ASTNode | null = null;
-  // let parentChildren: ASTNode[] = [];
+  let parentNode: ContentNode | null = null;
+  // let parentChildren: ContentNode[] = [];
   let targetIndex = -1;
 
-  function findParent(node: ASTNode, parent: ASTNode | null, _children: ASTNode[], index: number): void {
+  function findParent(node: ContentNode, parent: ContentNode | null, _children: ContentNode[], index: number): void {
     if (node.type === "text") {
       if (currentIndex === nodeIndex) {
         found = true;
@@ -87,19 +90,19 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
   }
 
   // 找到要替换的文本节点的父级
-  newAst.forEach((node, index) => {
+  newContent.forEach((node, index) => {
     if (!found) {
-      findParent(node, null, newAst, index);
+      findParent(node, null, newContent, index);
     }
   });
 
-  if (!found) return newAst;
+  if (!found) return newContent;
 
   // 替换父级节点的子节点
   if (parentNode === null) {
     // 根级别的替换
-    const before = newAst.slice(0, targetIndex);
-    const after = newAst.slice(targetIndex + 1);
+    const before = newContent.slice(0, targetIndex);
+    const after = newContent.slice(targetIndex + 1);
     if (wrapInSpan) {
       const spanElement = {
         type: "element" as const,
@@ -112,7 +115,7 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
     }
   } else {
     // 元素节点内的替换
-    const elementNode = parentNode as { children: ASTNode[] };
+    const elementNode = parentNode as { children: ContentNode[] };
     const before = elementNode.children.slice(0, targetIndex);
     const after = elementNode.children.slice(targetIndex + 1);
     if (wrapInSpan) {
@@ -125,13 +128,16 @@ export function replaceTextNodeInAST(ast: ASTNode[], nodeIndex: number, newNodes
     } else {
       elementNode.children = [...before, ...newNodes, ...after];
     }
-    return newAst;
+    return newContent;
   }
 }
 
+// 保持向后兼容
+export const replaceTextNodeInAST = replaceTextNodeInContent;
+
 // 清理空的节点（包括空的文本节点和空的元素节点）
-export function cleanupEmptyNodes(ast: ASTNode[]): ASTNode[] {
-  function cleanupNode(node: ASTNode): ASTNode | null {
+export function cleanupEmptyNodes(content: ContentNode[]): ContentNode[] {
+  function cleanupNode(node: ContentNode): ContentNode | null {
     if (node.type === "text") {
       // 保留非空文本节点
       return node.value !== '' ? node : null;
@@ -139,7 +145,7 @@ export function cleanupEmptyNodes(ast: ASTNode[]): ASTNode[] {
       // 递归清理子节点
       const cleanedChildren = node.children
         .map(cleanupNode)
-        .filter((child): child is ASTNode => child !== null);
+        .filter((child): child is ContentNode => child !== null);
 
       // 如果子节点为空，删除整个元素节点
       if (cleanedChildren.length === 0) {
@@ -158,16 +164,16 @@ export function cleanupEmptyNodes(ast: ASTNode[]): ASTNode[] {
     return node;
   }
 
-  return ast
+  return content
     .map(cleanupNode)
-    .filter((node): node is ASTNode => node !== null);
+    .filter((node): node is ContentNode => node !== null);
 }
 
 // 合并相邻的相同格式的文本节点
-function mergeAdjacentTextNodes(nodes: ASTNode[]): ASTNode[] {
+function mergeAdjacentTextNodes(nodes: ContentNode[]): ContentNode[] {
   if (nodes.length === 0) return nodes;
 
-  const result: ASTNode[] = [];
+  const result: ContentNode[] = [];
   let current: TextNode | null = null;
 
   for (const node of nodes) {
@@ -198,6 +204,6 @@ function mergeAdjacentTextNodes(nodes: ASTNode[]): ASTNode[] {
 }
 
 // 合并空的文本节点（保持向后兼容）
-export function mergeEmptyTextNodes(ast: ASTNode[]): ASTNode[] {
-  return cleanupEmptyNodes(ast);
+export function mergeEmptyTextNodes(content: ContentNode[]): ContentNode[] {
+  return cleanupEmptyNodes(content);
 }

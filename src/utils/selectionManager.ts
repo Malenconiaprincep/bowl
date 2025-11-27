@@ -1,9 +1,9 @@
-import type { ASTNode } from '../types/ast'
+import type { ContentNode } from '../types/ast'
 import type { Selection } from './index'
 
 export interface SelectionInfo {
   blockId: string
-  ast: ASTNode[]
+  ast: ContentNode[]  // 保持 ast 名称以兼容现有代码
   selection: Selection
   position: { x: number; y: number }
 }
@@ -165,7 +165,7 @@ class SelectionManager {
   }
 
   // 从选区范围找到对应的block
-  private findBlockFromRange(range: Range): { blockId: string; ast: ASTNode[] } | null {
+  private findBlockFromRange(range: Range): { blockId: string; ast: ContentNode[] } | null {
     const selectedElement = range.commonAncestorContainer
     const blockElement = selectedElement.nodeType === Node.TEXT_NODE
       ? (selectedElement as Text).parentElement?.closest('[data-block-id]')
@@ -176,11 +176,11 @@ class SelectionManager {
     const blockId = blockElement.getAttribute('data-block-id')
     if (!blockId) return null
 
-    // 这里需要从全局状态或通过其他方式获取AST
+    // 这里需要从全局状态或通过其他方式获取内容
     // 暂时返回空数组，实际使用时需要传入blocks数据
     return {
       blockId,
-      ast: [] // TODO: 从blocks数据中获取对应的AST
+      ast: [] // TODO: 从blocks数据中获取对应的内容
     }
   }
 
@@ -254,10 +254,10 @@ class SelectionManager {
     this.callbacks?.onSelectionChange(null)
   }
 
-  // 手动更新选区信息（用于外部更新AST后同步）
-  updateSelectionInfo(blockId: string, ast: ASTNode[]) {
+  // 手动更新选区信息（用于外部更新内容后同步）
+  updateSelectionInfo(blockId: string, content: ContentNode[]) {
     if (this.lastSelection && this.lastSelection.blockId === blockId) {
-      this.lastSelection.ast = ast
+      this.lastSelection.ast = content
     }
   }
 }

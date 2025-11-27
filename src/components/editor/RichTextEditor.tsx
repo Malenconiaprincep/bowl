@@ -1,16 +1,16 @@
 import { useState, useCallback, useLayoutEffect, forwardRef, useImperativeHandle } from "react";
-import type { ASTNode } from "../../types/ast";
+import type { ContentNode } from "../../types/ast";
 import type { Block } from "../../types/blocks";
 import type { BlockComponentMethods } from "../../types/blockComponent";
 import { useCursorPosition } from "../../hooks/useCursorPosition";
 import { useTextInput } from "../../hooks/useTextInput";
 import { applyFormatToSelection, getTextNodes, findNodeAndOffsetBySelectionOffset, hasSelection } from "../../utils";
-// import { AstEditorToolbar } from "./AstEditorToolbar";
+// import { EditorToolbar } from "./EditorToolbar";
 // import { hasSelection } from "../../utils";
 import "../../styles/editor.css";
 
-// 渲染 AST 节点
-function renderNode(node: ASTNode, key: number): React.ReactNode {
+// 渲染内容节点
+function renderNode(node: ContentNode, key: number): React.ReactNode {
   if (node.type === "text") {
     // 如果有标记，使用 span 标签和 className
     if (node.marks && node.marks.length > 0) {
@@ -38,18 +38,18 @@ function renderNode(node: ASTNode, key: number): React.ReactNode {
   return null;
 }
 
-const ASTEditor = forwardRef<BlockComponentMethods, {
+const RichTextEditor = forwardRef<BlockComponentMethods, {
   blockId?: string;
-  initialAST: ASTNode[];
-  onChange?: (ast: ASTNode[]) => void;
+  initialContent: ContentNode[];
+  onChange?: (content: ContentNode[]) => void;
   blockIndex?: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
   onDeleteBlock?: (blockIndex: number) => void;
   onFindPreviousTextBlock?: (currentIndex: number) => number;
   onFocusBlockAtEnd?: (blockIndex: number) => void;
-  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ASTNode[]) => void;
+  onMergeWithPreviousBlock?: (currentIndex: number, currentContent: ContentNode[]) => void;
 }>(({
-  initialAST,
+  initialContent,
   onChange,
   blockIndex,
   onInsertBlock,
@@ -58,13 +58,13 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
   onFocusBlockAtEnd,
   onMergeWithPreviousBlock
 }, ref) => {
-  const [ast, setAst] = useState<ASTNode[]>(initialAST);
+  const [content, setContent] = useState<ContentNode[]>(initialContent);
 
-  // 当initialAST变化时，更新本地状态
-  const initialASTString = JSON.stringify(initialAST);
+  // 当initialContent变化时，更新本地状态
+  const initialContentString = JSON.stringify(initialContent);
   useLayoutEffect(() => {
-    setAst(initialAST);
-  }, [initialAST, initialASTString]);
+    setContent(initialContent);
+  }, [initialContent, initialContentString]);
 
   // 使用光标位置管理 hook
   const {
@@ -80,13 +80,13 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
     handleCompositionEnd,
     isComposing,
     compositionKey
-  } = useCursorPosition(ast);
+  } = useCursorPosition(content);
 
-  // 更新 AST 并触发回调
-  const updateAST = useCallback((newAST: ASTNode[]) => {
+  // 更新内容并触发回调
+  const updateContent = useCallback((newContent: ContentNode[]) => {
     isUpdatingFromState.current = true;
-    setAst(newAST);
-    onChange?.(newAST);
+    setContent(newContent);
+    onChange?.(newContent);
   }, [onChange, isUpdatingFromState]);
 
   // 格式化方法
@@ -94,13 +94,13 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
     if (hasSelection(selection)) {
       // 对选区应用格式化
       pendingSelection.current = { ...selection };
-      const newAST = applyFormatToSelection(ast, selection, mark);
-      updateAST(newAST);
+      const newContent = applyFormatToSelection(content, selection, mark);
+      updateContent(newContent);
     } else {
       // 对当前光标位置应用格式化
       pendingSelection.current = { ...selection };
-      const newAST = JSON.parse(JSON.stringify(ast));
-      const textNodes = getTextNodes(newAST);
+      const newContent = JSON.parse(JSON.stringify(content));
+      const textNodes = getTextNodes(newContent);
       const { nodeIndex } = findNodeAndOffsetBySelectionOffset(textNodes, selection.start);
       const targetNode = textNodes[nodeIndex];
 
@@ -112,10 +112,10 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
           // 如果已有该格式，则移除（切换格式）
           targetNode.marks = targetNode.marks.filter(m => m !== mark);
         }
-        updateAST(newAST);
+        updateContent(newContent);
       }
     }
-  }, [ast, selection, updateAST, pendingSelection]);
+  }, [content, selection, updateContent, pendingSelection]);
 
   // 暴露聚焦方法
   useImperativeHandle(ref, () => ({
@@ -165,7 +165,7 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
       pendingSelection.current = null;
     }
     isUpdatingFromState.current = false;
-  }, [ast, restoreCursorPosition, restoreSelection, pendingSelection, isUpdatingFromState]);
+  }, [content, restoreCursorPosition, restoreSelection, pendingSelection, isUpdatingFromState]);
 
   // 当 compositionKey 变化时（组合输入结束，DOM 重建），恢复光标位置并聚焦
   useLayoutEffect(() => {
@@ -183,9 +183,9 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
 
   // 使用文本输入处理 hook
   const { handleKeyDown } = useTextInput(
-    ast,
+    content,
     setSelection,
-    updateAST,
+    updateContent,
     pendingSelection,
     selection,
     editorRef,
@@ -213,13 +213,13 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
         onCompositionEnd={handleCompositionEnd}
         className="editor-content"
       >
-        {ast.map((node, idx) => renderNode(node, idx))}
+        {content.map((node, idx) => renderNode(node, idx))}
       </div>
       {/* 
-      <AstEditorToolbar
-        ast={ast}
+      <EditorToolbar
+        content={content}
         selection={selection}
-        onUpdateAST={updateAST}
+        onUpdateContent={updateContent}
         pendingSelection={pendingSelection}
       /> */}
 
@@ -231,6 +231,7 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
   );
 });
 
-ASTEditor.displayName = 'ASTEditor';
+RichTextEditor.displayName = 'RichTextEditor';
 
-export default ASTEditor;
+export default RichTextEditor;
+

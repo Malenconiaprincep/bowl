@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getTextNodes, cloneAST, getTargetTextNode, replaceTextNodeInAST, mergeEmptyTextNodes } from '../utils/core';
-import type { ASTNode, TextNode, Mark, ElementTag } from '../types/ast';
+import { getTextNodes, cloneContent, getTargetTextNode, replaceTextNodeInContent, mergeEmptyTextNodes } from '../utils/core';
+import type { ContentNode, TextNode, Mark, ElementTag } from '../types/ast';
 
 // 测试用的 AST 数据
 const createTextNode = (value: string, marks?: Mark[]): TextNode => ({
@@ -9,13 +9,13 @@ const createTextNode = (value: string, marks?: Mark[]): TextNode => ({
   marks
 });
 
-const createElementNode = (tag: ElementTag, children: ASTNode[]): ASTNode => ({
+const createElementNode = (tag: ElementTag, children: ContentNode[]): ContentNode => ({
   type: 'element',
   tag,
   children
 });
 
-const createTestAST = (): ASTNode[] => [
+const createTestContent = (): ContentNode[] => [
   createElementNode('p', [
     createTextNode('Hello '),
     createTextNode('world', ['b']),
@@ -27,7 +27,7 @@ const createTestAST = (): ASTNode[] => [
 describe('core', () => {
   describe('getTextNodes', () => {
     it('应该正确提取所有文本节点', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const textNodes = getTextNodes(ast);
 
       expect(textNodes).toHaveLength(4);
@@ -54,14 +54,14 @@ describe('core', () => {
     });
 
     it('应该处理空 AST', () => {
-      const ast: ASTNode[] = [];
+      const ast: ContentNode[] = [];
       const textNodes = getTextNodes(ast);
 
       expect(textNodes).toHaveLength(0);
     });
 
     it('应该处理只有元素节点的 AST', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         createElementNode('p', [
           createElementNode('span', [])
         ])
@@ -72,7 +72,7 @@ describe('core', () => {
     });
 
     it('应该处理只有文本节点的 AST', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         createTextNode('Hello'),
         createTextNode('World')
       ];
@@ -86,33 +86,33 @@ describe('core', () => {
 
   describe('cloneAST', () => {
     it('应该深拷贝 AST', () => {
-      const ast = createTestAST();
-      const cloned = cloneAST(ast);
+      const ast = createTestContent();
+      const cloned = cloneContent(ast);
 
       expect(cloned).toEqual(ast);
       expect(cloned).not.toBe(ast); // 不是同一个引用
 
       // 修改克隆后的 AST 不应该影响原 AST
-      const pElement = cloned[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      const pElement = cloned[0] as { type: 'element'; tag: string; children: ContentNode[] };
       const textNode = pElement.children[0] as TextNode;
       textNode.value = 'Modified';
 
-      const originalPElement = ast[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      const originalPElement = ast[0] as { type: 'element'; tag: string; children: ContentNode[] };
       const originalTextNode = originalPElement.children[0] as TextNode;
       expect(originalTextNode.value).toBe('Hello ');
       expect(textNode.value).toBe('Modified');
     });
 
     it('应该处理空 AST', () => {
-      const ast: ASTNode[] = [];
-      const cloned = cloneAST(ast);
+      const ast: ContentNode[] = [];
+      const cloned = cloneContent(ast);
 
       expect(cloned).toEqual([]);
       expect(cloned).not.toBe(ast);
     });
 
     it('应该深拷贝嵌套结构', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         createElementNode('p', [
           createTextNode('nested', ['b']),
           createElementNode('span', [
@@ -120,7 +120,7 @@ describe('core', () => {
           ])
         ])
       ];
-      const cloned = cloneAST(ast);
+      const cloned = cloneContent(ast);
 
       expect(cloned).toEqual(ast);
 
@@ -143,7 +143,7 @@ describe('core', () => {
 
   describe('getTargetTextNode', () => {
     it('应该正确获取指定索引的文本节点', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
 
       expect(getTargetTextNode(ast, 0)).toEqual({
         type: 'text',
@@ -171,14 +171,14 @@ describe('core', () => {
     });
 
     it('应该处理无效索引', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
 
       expect(getTargetTextNode(ast, -1)).toBeNull();
       expect(getTargetTextNode(ast, 999)).toBeNull();
     });
 
     it('应该处理空 AST', () => {
-      const ast: ASTNode[] = [];
+      const ast: ContentNode[] = [];
 
       expect(getTargetTextNode(ast, 0)).toBeNull();
     });
@@ -186,13 +186,13 @@ describe('core', () => {
 
   describe('replaceTextNodeInAST', () => {
     it('应该用单个新节点替换文本节点', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const newNodes: TextNode[] = [
         createTextNode('replaced', ['b', 'i'])
       ];
 
-      const result = replaceTextNodeInAST(ast, 0, newNodes);
-      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      const result = replaceTextNodeInContent(ast, 0, newNodes);
+      const pElement = result[0] as { type: 'element'; tag: string; children: ContentNode[] };
 
       expect(pElement.children[0]).toEqual({
         type: 'text',
@@ -202,14 +202,14 @@ describe('core', () => {
     });
 
     it('应该用多个新节点替换文本节点（包装在 span 中）', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const newNodes: TextNode[] = [
         createTextNode('first', ['b']),
         createTextNode('second', ['i'])
       ];
 
-      const result = replaceTextNodeInAST(ast, 0, newNodes, true);
-      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      const result = replaceTextNodeInContent(ast, 0, newNodes, true);
+      const pElement = result[0] as { type: 'element'; tag: string; children: ContentNode[] };
 
       expect(pElement.children[0]).toEqual({
         type: 'element',
@@ -222,20 +222,20 @@ describe('core', () => {
     });
 
     it('应该处理无效索引（返回原 AST）', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const newNodes: TextNode[] = [createTextNode('test')];
 
-      const result = replaceTextNodeInAST(ast, 999, newNodes);
+      const result = replaceTextNodeInContent(ast, 999, newNodes);
 
       expect(result).toEqual(ast);
     });
 
     it('应该替换嵌套元素中的文本节点', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const newNodes: TextNode[] = [createTextNode('nested-replaced', ['u'])];
 
-      const result = replaceTextNodeInAST(ast, 1, newNodes);
-      const pElement = result[0] as { type: 'element'; tag: string; children: ASTNode[] };
+      const result = replaceTextNodeInContent(ast, 1, newNodes);
+      const pElement = result[0] as { type: 'element'; tag: string; children: ContentNode[] };
 
       expect(pElement.children[1]).toEqual({
         type: 'text',
@@ -247,7 +247,7 @@ describe('core', () => {
 
   describe('mergeEmptyTextNodes', () => {
     it('应该删除空文本节点', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         createTextNode('Hello'),
         createTextNode(''), // 空节点
         createTextNode(''), // 空节点
@@ -271,14 +271,14 @@ describe('core', () => {
     });
 
     it('应该处理没有空节点的情况', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const result = mergeEmptyTextNodes(ast);
 
       expect(result).toEqual(ast);
     });
 
     it('应该处理只有空节点的情况', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         createTextNode(''),
         createTextNode(''),
         createTextNode('')
@@ -291,7 +291,7 @@ describe('core', () => {
     });
 
     it('应该处理空和非空节点混合的情况', () => {
-      const ast: ASTNode[] = [
+      const ast: ContentNode[] = [
         createTextNode('Hello'),
         createTextNode(''), // 空节点
         createTextNode('World'),

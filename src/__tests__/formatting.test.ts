@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { applyFormatToSelection } from '../utils/formatting';
-import type { ASTNode, TextNode, Mark, ElementNode, ElementTag } from '../types/ast';
+import type { ContentNode, TextNode, Mark, ElementNode, ElementTag } from '../types/ast';
 import type { Selection } from '../utils/selection';
 
 // 测试用的 AST 数据
@@ -10,13 +10,13 @@ const createTextNode = (value: string, marks?: Mark[]): TextNode => ({
   marks
 });
 
-const createElementNode = (tag: ElementTag, children: ASTNode[]): ASTNode => ({
+const createElementNode = (tag: ElementTag, children: ContentNode[]): ContentNode => ({
   type: 'element',
   tag,
   children
 });
 
-const createTestAST = (): ASTNode[] => [
+const createTestContent = (): ContentNode[] => [
   createElementNode('p', [
     createTextNode('Hello '),
     createElementNode('span', [
@@ -26,7 +26,7 @@ const createTestAST = (): ASTNode[] => [
   ])
 ];
 
-const createMultiNodeAST = (): ASTNode[] => [
+const createMultiNodeContent = (): ContentNode[] => [
   createElementNode('p', [
     createTextNode('First '),
     createTextNode('second '),
@@ -35,7 +35,7 @@ const createMultiNodeAST = (): ASTNode[] => [
   ])
 ];
 
-const createFormattedAST = (): ASTNode[] => [
+const createFormattedContent = (): ContentNode[] => [
   createElementNode('p', [
     createTextNode('Hello ', ['b']),
     createTextNode('world', ['i']),
@@ -46,7 +46,7 @@ const createFormattedAST = (): ASTNode[] => [
 describe('formatting', () => {
   describe('applyFormatToSelection', () => {
     it('应该对单个文本节点内的选区应用格式', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const selection: Selection = {
         start: 2, // "Hello " 中的 "l"
         end: 4,   // "Hello " 中的 "l"
@@ -79,7 +79,7 @@ describe('formatting', () => {
     });
 
     it('应该对跨节点选区应用格式', () => {
-      const ast = createMultiNodeAST();
+      const ast = createMultiNodeContent();
       const selection: Selection = {
         start: 3, // "First " 中的 "s"
         end: 9,   // "second " 中的 "o"
@@ -123,7 +123,7 @@ describe('formatting', () => {
       //   createTextNode('!')
       // ])
 
-      const ast = createTestAST();
+      const ast = createTestContent();
       const selection: Selection = {
         start: 6, // "world" 的开始
         end: 11,  // "world" 的结束
@@ -145,7 +145,7 @@ describe('formatting', () => {
     });
 
     it('应该处理选区在元素节点内的情况', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const selection: Selection = {
         start: 7, // "world" 中的 "o"
         end: 9,   // "world" 中的 "r"
@@ -180,7 +180,7 @@ describe('formatting', () => {
     });
 
     it('应该处理无效选区', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const invalidSelection: Selection = {
         start: 100, // 超出范围
         end: 200,
@@ -193,7 +193,7 @@ describe('formatting', () => {
     });
 
     it('应该处理没有选区的情况', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const noSelection: Selection = {
         start: 0,
         end: 0,
@@ -206,7 +206,7 @@ describe('formatting', () => {
     });
 
     it('应该避免重复添加相同的格式', () => {
-      const ast = createFormattedAST();
+      const ast = createFormattedContent();
       const selection: Selection = {
         start: 0, // "Hello " 的开始
         end: 6,   // "Hello " 的结束
@@ -220,7 +220,7 @@ describe('formatting', () => {
     });
 
     it('应该处理选区在单个字符上的情况', () => {
-      const ast = createTestAST();
+      const ast = createTestContent();
       const selection: Selection = {
         start: 0, // "H"
         end: 1,   // "H"
