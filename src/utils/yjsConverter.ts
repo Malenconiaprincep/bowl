@@ -211,9 +211,18 @@ export function updateBlockInYDoc(
         const block = yMapToBlock(yBlock);
         if (block) {
           const updatedBlock = updater(block);
-          const newYBlock = blockToYMap(updatedBlock, doc);
-          yBlocks.delete(i, 1);
-          yBlocks.insert(i, [newYBlock]);
+          // 直接更新 Y.Map 属性，避免 delete + insert
+          yBlock.set('type', updatedBlock.type);
+          if (updatedBlock.type === 'media') {
+            yBlock.set('content', updatedBlock.content);
+          } else {
+            const yContent = new Y.Array<Y.Map<unknown>>();
+            updatedBlock.content.forEach(node => {
+              const yNode = contentNodeToYMap(node, doc);
+              yContent.push([yNode]);
+            });
+            yBlock.set('content', yContent);
+          }
         }
         break;
       }

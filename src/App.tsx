@@ -36,14 +36,14 @@ const initialBlocks: Block[] = [
 
 function App() {
   // 使用 yjs hook 管理数据
-  const { blocks, doc } = useYjs({ initialBlocks });
+  const { blocks, doc, dispatch } = useYjs({ initialBlocks });
 
   // doc 可以用于协同编辑，传递给 WebSocket provider 等
   console.log('Y.Doc:', doc);
 
   return (
     <div className="App">
-      <PageBlock initialBlocks={blocks} />
+      <PageBlock blocks={blocks} dispatch={dispatch} />
     </div>
   );
 }

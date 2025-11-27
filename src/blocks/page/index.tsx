@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import { useCallback, useRef, useMemo, useEffect, useState } from 'react'
 import type { Block } from '../../types/blocks'
 import type { ContentNode } from '../../types/ast'
 import BlockComponent from '../../components/BlockComponent'
@@ -8,14 +8,15 @@ import { selectionManager, type SelectionInfo } from '../../utils/selectionManag
 import { mergeContent } from '../../utils/textOperations'
 import { calculateTextLength, findPreviousTextBlock, isTextBlock } from '../../utils/blockUtils'
 import type { TextMethods } from '../text'
+import type { BlockAction } from '../../hooks/useYjs'
 import './style.scss'
 
 interface PageBlockProps {
-  initialBlocks: Block[]
+  blocks: Block[]
+  dispatch: (action: BlockAction) => void
 }
 
-export default function PageBlock({ initialBlocks }: PageBlockProps) {
-  const [blocks, setBlocks] = useState<Block[]>(initialBlocks)
+export default function PageBlock({ blocks, dispatch }: PageBlockProps) {
   const blocksRef = useRef(blocks)
 
   // 工具栏相关状态
@@ -102,50 +103,45 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
 
   // 插入新块的方法
   const insertBlock = useCallback((blockIndex: number, newBlock: Block) => {
-    setBlocks(prevBlocks => {
-      const newBlocks = [...prevBlocks]
-      newBlocks.splice(blockIndex + 1, 0, newBlock)
-      return newBlocks
-    })
+    // 使用 dispatch 添加 block
+    dispatch({ type: 'add', block: newBlock, index: blockIndex + 1 })
 
     // 使用 requestAnimationFrame 确保在下一个渲染周期执行
     requestAnimationFrame(() => {
       focusBlock(newBlock.id)
     })
-  }, [focusBlock])
+  }, [focusBlock, dispatch])
 
   // 更新块的方法
   const updateBlock = useCallback((blockIndex: number, newContent: ContentNode[]) => {
-    setBlocks(prevBlocks => {
-      // 使用更精确的更新策略，只更新变化的块
-      const targetBlock = prevBlocks[blockIndex]
-      if (!targetBlock || !isTextBlock(targetBlock)) {
-        return prevBlocks
-      }
+    const targetBlock = blocksRef.current[blockIndex]
+    if (!targetBlock || !isTextBlock(targetBlock)) {
+      return
+    }
 
-      // 检查内容是否真的发生了变化
-      const currentContent = targetBlock.content as ContentNode[]
-      if (JSON.stringify(currentContent) === JSON.stringify(newContent)) {
-        return prevBlocks
-      }
+    // 检查内容是否真的发生了变化
+    const currentContent = targetBlock.content as ContentNode[]
+    if (JSON.stringify(currentContent) === JSON.stringify(newContent)) {
+      return
+    }
 
-      const newBlocks = [...prevBlocks]
-      newBlocks[blockIndex] = {
-        ...targetBlock,
-        content: newContent
-      } as Block
-      return newBlocks
+    // 使用 dispatch 更新 block
+    dispatch({
+      type: 'update',
+      blockId: targetBlock.id,
+      updater: (block) => ({ ...block, content: newContent } as Block)
     })
-  }, [])
+  }, [dispatch])
 
   // 删除块的方法
   const deleteBlock = useCallback((blockIndex: number) => {
-    setBlocks(prevBlocks => {
-      const newBlocks = [...prevBlocks]
-      newBlocks.splice(blockIndex, 1)
-      return newBlocks
-    })
-  }, [])
+    const targetBlock = blocksRef.current[blockIndex]
+    if (!targetBlock) {
+      return
+    }
+    // 使用 dispatch 删除 block
+    dispatch({ type: 'remove', blockId: targetBlock.id })
+  }, [dispatch])
 
 
 
@@ -154,44 +150,37 @@ export default function PageBlock({ initialBlocks }: PageBlockProps) {
     const currentBlocks = blocksRef.current
     const previousIndex = findPreviousTextBlock(currentBlocks, currentIndex)
     if (previousIndex !== -1) {
-      setBlocks(prevBlocks => {
-        const newBlocks = [...prevBlocks]
-        const previousBlock = newBlocks[previousIndex]
-        const currentBlock = newBlocks[currentIndex]
+      const previousBlock = currentBlocks[previousIndex]
+      const currentBlock = currentBlocks[currentIndex]
 
-        if (previousBlock && currentBlock &&
-          isTextBlock(previousBlock) && isTextBlock(currentBlock)) {
+      if (previousBlock && currentBlock &&
+        isTextBlock(previousBlock) && isTextBlock(currentBlock)) {
 
-          // 使用mergeContent函数合并内容
-          const { mergedContent, newCursorPosition } = mergeContent(previousBlock.content as ContentNode[], currentContent)
+        // 使用mergeContent函数合并内容
+        const { mergedContent, newCursorPosition } = mergeContent(previousBlock.content as ContentNode[], currentContent)
 
-          // 使用合并后的内容更新上一个block
-          newBlocks[previousIndex] = {
-            ...previousBlock,
-            content: mergedContent
-          } as Block
+        // 使用 dispatch 更新上一个 block
+        dispatch({
+          type: 'update',
+          blockId: previousBlock.id,
+          updater: (block) => ({ ...block, content: mergedContent } as Block)
+        })
 
-          // 删除当前block
-          newBlocks.splice(currentIndex, 1)
+        // 使用 dispatch 删除当前 block
+        dispatch({ type: 'remove', blockId: currentBlock.id })
 
-          // 聚焦到合并后的位置
-          setTimeout(() => {
-            const block = newBlocks[previousIndex]
-            if (block) {
-              const blockInstance = blockManager.getBlock(block.id)
-              if (blockInstance?.component) {
-                const component = blockInstance.component as unknown as TextMethods
-                component.focus?.()
-                component.setSelection?.({ start: newCursorPosition, end: newCursorPosition })
-              }
-            }
-          }, 0)
-        }
-
-        return newBlocks
-      })
+        // 聚焦到合并后的位置
+        setTimeout(() => {
+          const blockInstance = blockManager.getBlock(previousBlock.id)
+          if (blockInstance?.component) {
+            const component = blockInstance.component as unknown as TextMethods
+            component.focus?.()
+            component.setSelection?.({ start: newCursorPosition, end: newCursorPosition })
+          }
+        }, 0)
+      }
     }
-  }, [])
+  }, [dispatch])
 
   // 包装 findPreviousTextBlock 以适配接口
   const wrappedFindPreviousTextBlock = useCallback((currentIndex: number) => {

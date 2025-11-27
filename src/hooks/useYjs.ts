@@ -14,13 +14,17 @@ export interface UseYjsOptions {
   doc?: Y.Doc;
 }
 
+// 统一的 Block 操作 Action 类型
+export type BlockAction =
+  | { type: 'update'; blockId: string; updater: (block: Block) => Block }
+  | { type: 'add'; block: Block; index?: number }
+  | { type: 'remove'; blockId: string }
+  | { type: 'set'; blocks: Block[] };
+
 export interface UseYjsReturn {
   doc: Y.Doc;
   blocks: Block[];
-  updateBlock: (blockId: string, updater: (block: Block) => Block) => void;
-  addBlock: (block: Block, index?: number) => void;
-  removeBlock: (blockId: string) => void;
-  setBlocks: (blocks: Block[]) => void;
+  dispatch: (action: BlockAction) => void;
 }
 
 /**
@@ -57,40 +61,30 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     };
   }, [doc]);
 
-  // 更新单个 block
-  const updateBlock = useCallback(
-    (blockId: string, updater: (block: Block) => Block) => {
-      updateBlockInYDoc(doc, blockId, updater);
-    },
-    [doc]
-  );
-
-  // 添加 block
-  const addBlock = useCallback(
-    (block: Block, index?: number) => {
-      addBlockToYDoc(doc, block, index);
-    },
-    [doc]
-  );
-
-  // 删除 block
-  const removeBlock = useCallback(
-    (blockId: string) => {
-      removeBlockFromYDoc(doc, blockId);
-    },
-    [doc]
-  );
-
-  // 批量设置 blocks（会清空现有数据）
-  const setBlocks = useCallback(
-    (newBlocks: Block[]) => {
-      const yBlocks = doc.getArray<Y.Map<unknown>>('blocks');
-      doc.transact(() => {
-        yBlocks.delete(0, yBlocks.length);
-        newBlocks.forEach(block => {
-          addBlockToYDoc(doc, block);
-        });
-      });
+  // 统一的 dispatch 方法
+  const dispatch = useCallback(
+    (action: BlockAction) => {
+      switch (action.type) {
+        case 'update':
+          updateBlockInYDoc(doc, action.blockId, action.updater);
+          break;
+        case 'add':
+          addBlockToYDoc(doc, action.block, action.index);
+          break;
+        case 'remove':
+          removeBlockFromYDoc(doc, action.blockId);
+          break;
+        case 'set': {
+          const yBlocks = doc.getArray<Y.Map<unknown>>('blocks');
+          doc.transact(() => {
+            yBlocks.delete(0, yBlocks.length);
+            action.blocks.forEach(block => {
+              addBlockToYDoc(doc, block);
+            });
+          });
+          break;
+        }
+      }
     },
     [doc]
   );
@@ -98,10 +92,7 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
   return {
     doc,
     blocks,
-    updateBlock,
-    addBlock,
-    removeBlock,
-    setBlocks,
+    dispatch,
   };
 }
 
