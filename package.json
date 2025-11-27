@@ -10,12 +10,14 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "server": "npx y-websocket"
   },
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "uuidv4": "^6.2.13",
+    "y-websocket": "^2.1.0",
     "yjs": "^13.6.18"
   },
   "devDependencies": {
