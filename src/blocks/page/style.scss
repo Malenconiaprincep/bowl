@@ -2,7 +2,9 @@
   margin: 0 auto;
   width: 1000px;
   position: relative; /* 为工具栏定位提供参考 */
-  height: 100vh;
+  min-height: 100vh;
+  padding-top: 50px; /* 为顶部状态栏留出空间 */
+  box-sizing: border-box;
 }
 
 .floating-toolbar {

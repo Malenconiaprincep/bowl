@@ -89,144 +89,171 @@ function App() {
       {/* 顶部状态栏 */}
       <div style={{
         position: 'fixed',
-        top: 10,
-        right: 10,
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 40,
+        backgroundColor: 'white',
+        borderBottom: '1px solid #e5e7eb',
         display: 'flex',
-        gap: 8,
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 16px',
         zIndex: 1000,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
       }}>
-        {/* 在线用户 */}
+        {/* 左侧：房间信息 */}
         <div style={{
-          backgroundColor: 'white',
-          borderRadius: 12,
-          padding: '8px 12px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
           fontSize: 13,
+          color: '#6b7280',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
         }}>
-          <div style={{ fontWeight: 600, marginBottom: 6, color: '#374151' }}>
-            👥 在线 ({users.length})
-          </div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 200 }}>
-            {users.map((user) => (
+          <span>🏠</span>
+          <span style={{ color: '#374151', fontWeight: 500 }}>{roomName}</span>
+          <span style={{
+            padding: '2px 8px',
+            borderRadius: 10,
+            fontSize: 11,
+            backgroundColor: connected ? '#d1fae5' : '#fee2e2',
+            color: connected ? '#065f46' : '#991b1b',
+          }}>
+            {connected ? '已连接' : '未连接'}
+          </span>
+        </div>
+
+        {/* 右侧：在线用户 */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          {/* 用户头像列表 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 12, color: '#6b7280', marginRight: 4 }}>
+              👥 {users.length}
+            </span>
+            {users.slice(0, 5).map((user, index) => (
               <div
                 key={user.id}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '2px 8px',
-                  borderRadius: 12,
-                  backgroundColor: user.color + '20',
-                  border: `1px solid ${user.color}`,
-                  fontSize: 12,
-                }}
-                title={user.id === currentUser?.id ? '我' : user.name}
-              >
-                <span style={{
-                  width: 8,
-                  height: 8,
+                  width: 26,
+                  height: 26,
                   borderRadius: '50%',
                   backgroundColor: user.color,
-                }} />
-                <span style={{
-                  color: '#374151',
-                  maxWidth: 80,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {user.id === currentUser?.id ? `${user.name} (我)` : user.name}
-                </span>
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 11,
+                  color: 'white',
+                  fontWeight: 600,
+                  marginLeft: index > 0 ? -8 : 0,
+                  border: '2px solid white',
+                  cursor: 'pointer',
+                }}
+                title={user.id === currentUser?.id ? `${user.name} (我)` : user.name}
+              >
+                {user.name.charAt(0).toUpperCase()}
               </div>
             ))}
+            {users.length > 5 && (
+              <div style={{
+                width: 26,
+                height: 26,
+                borderRadius: '50%',
+                backgroundColor: '#9ca3af',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 10,
+                color: 'white',
+                fontWeight: 600,
+                marginLeft: -8,
+                border: '2px solid white',
+              }}>
+                +{users.length - 5}
+              </div>
+            )}
           </div>
 
+          {/* 分隔线 */}
+          <div style={{ width: 1, height: 20, backgroundColor: '#e5e7eb' }} />
+
           {/* 修改昵称 */}
-          <div style={{ marginTop: 8, borderTop: '1px solid #e5e7eb', paddingTop: 8 }}>
-            {isEditingName ? (
-              <div style={{ display: 'flex', gap: 4 }}>
-                <input
-                  type="text"
-                  value={tempName}
-                  onChange={(e) => setTempName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-                  style={{
-                    flex: 1,
-                    padding: '4px 8px',
-                    borderRadius: 6,
-                    border: '1px solid #d1d5db',
-                    fontSize: 12,
-                    outline: 'none',
-                  }}
-                  autoFocus
-                  placeholder="输入昵称"
-                />
-                <button
-                  onClick={handleSaveName}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: 6,
-                    border: 'none',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                  }}
-                >
-                  保存
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setTempName(userName);
-                  setIsEditingName(true);
+          {isEditingName ? (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <input
+                type="text"
+                value={tempName}
+                onChange={(e) => setTempName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveName();
+                  if (e.key === 'Escape') setIsEditingName(false);
                 }}
                 style={{
-                  width: '100%',
+                  width: 100,
                   padding: '4px 8px',
                   borderRadius: 6,
                   border: '1px solid #d1d5db',
-                  backgroundColor: 'white',
+                  fontSize: 12,
+                  outline: 'none',
+                }}
+                autoFocus
+                placeholder="输入昵称"
+              />
+              <button
+                onClick={handleSaveName}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  border: 'none',
+                  backgroundColor: '#10b981',
+                  color: 'white',
                   fontSize: 12,
                   cursor: 'pointer',
-                  color: '#6b7280',
                 }}
               >
-                ✏️ 修改昵称
+                保存
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setTempName(userName);
+                setIsEditingName(true);
+              }}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 6,
+                border: '1px solid #e5e7eb',
+                backgroundColor: 'white',
+                fontSize: 12,
+                cursor: 'pointer',
+                color: '#374151',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <span style={{
+                width: 18,
+                height: 18,
+                borderRadius: '50%',
+                backgroundColor: currentUser?.color || '#9ca3af',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 10,
+                color: 'white',
+                fontWeight: 600,
+              }}>
+                {userName.charAt(0).toUpperCase()}
+              </span>
+              {userName}
+            </button>
+          )}
         </div>
-
-        {/* 连接状态 */}
-        <div style={{
-          padding: '8px 16px',
-          borderRadius: 20,
-          fontSize: 12,
-          fontWeight: 500,
-          backgroundColor: connected ? '#10b981' : '#ef4444',
-          color: 'white',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        }}>
-          {connected ? '🟢 已连接' : '🔴 未连接'}
-        </div>
-      </div>
-
-      {/* 房间信息 */}
-      <div style={{
-        position: 'fixed',
-        top: 10,
-        left: 10,
-        padding: '8px 12px',
-        borderRadius: 8,
-        fontSize: 12,
-        backgroundColor: 'white',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        color: '#6b7280',
-      }}>
-        🏠 房间: <span style={{ color: '#374151', fontWeight: 500 }}>{roomName}</span>
       </div>
 
       <PageBlock blocks={blocks} dispatch={dispatch} />
