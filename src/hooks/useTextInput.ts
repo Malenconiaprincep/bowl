@@ -68,6 +68,22 @@ export function useTextInput(
 
   // 处理删除操作
   const handleDelete = useCallback(() => {
+    // 检查是否有选区
+    const hasSelectionRange = selection.start !== selection.end;
+
+    // 检查光标是否在开头位置（光标位置为0且没有选区）
+    // 只有在没有选区且光标在开头时，才触发合并逻辑
+    if (!hasSelectionRange && selection.start === 0 && blockIndex !== undefined && onMergeWithPreviousBlock) {
+      // 查找上一个textBlock
+      const previousTextBlockIndex = onFindPreviousTextBlock?.(blockIndex);
+
+      if (previousTextBlockIndex !== -1) {
+        // 合并当前block到上一个textBlock
+        onMergeWithPreviousBlock(blockIndex, content);
+        return;
+      }
+    }
+
     const { newContent, newCursorPosition } = deleteSelection(content, selection);
 
     // 检查是否已经变空且删除后仍然为空内容
@@ -81,18 +97,6 @@ export function useTextInput(
 
         // 聚焦到上一个textBlock的末尾
         onFocusBlockAtEnd(previousTextBlockIndex);
-        return;
-      }
-    }
-
-    // 检查光标是否在开头位置（光标位置为0）
-    if (selection.start === 0 && blockIndex !== undefined && onMergeWithPreviousBlock) {
-      // 查找上一个textBlock
-      const previousTextBlockIndex = onFindPreviousTextBlock?.(blockIndex);
-
-      if (previousTextBlockIndex !== -1) {
-        // 合并当前block到上一个textBlock
-        onMergeWithPreviousBlock(blockIndex, content);
         return;
       }
     }
