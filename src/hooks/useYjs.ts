@@ -23,6 +23,8 @@ export interface RemoteCursor {
   userName: string;
   userColor: string;
   blockId: string;
+  /** 光标在文本中的偏移位置 */
+  offset?: number;
 }
 
 export interface UseYjsOptions {
@@ -59,8 +61,8 @@ export interface UseYjsReturn {
   setUserName: (name: string) => void;
   /** 远程用户的光标位置 */
   remoteCursors: RemoteCursor[];
-  /** 设置当前用户聚焦的 block */
-  setFocusedBlock: (blockId: string | null) => void;
+  /** 设置当前用户聚焦的 block 和光标位置 */
+  setFocusedBlock: (blockId: string | null, offset?: number) => void;
 }
 
 // 随机生成用户颜色
@@ -138,6 +140,7 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
               userName: state.user.name || '匿名用户',
               userColor: state.user.color || '#888',
               blockId: state.cursor.blockId,
+              offset: state.cursor.offset,
             });
           }
         }
@@ -241,12 +244,12 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     setCurrentUser(newUser);
   }, []);
 
-  // 设置当前用户聚焦的 block
-  const setFocusedBlock = useCallback((blockId: string | null) => {
+  // 设置当前用户聚焦的 block 和光标位置
+  const setFocusedBlock = useCallback((blockId: string | null, offset?: number) => {
     const provider = providerRef.current;
     if (!provider) return;
 
-    provider.awareness.setLocalStateField('cursor', blockId ? { blockId } : null);
+    provider.awareness.setLocalStateField('cursor', blockId ? { blockId, offset } : null);
   }, []);
 
   return {
