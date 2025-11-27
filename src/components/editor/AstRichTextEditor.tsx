@@ -78,7 +78,8 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
     handleSelectionChange,
     handleCompositionStart,
     handleCompositionEnd,
-    isComposing
+    isComposing,
+    compositionKey
   } = useCursorPosition(ast);
 
   // 更新 AST 并触发回调
@@ -166,6 +167,20 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
     isUpdatingFromState.current = false;
   }, [ast, restoreCursorPosition, restoreSelection, pendingSelection, isUpdatingFromState]);
 
+  // 当 compositionKey 变化时（组合输入结束，DOM 重建），恢复光标位置并聚焦
+  useLayoutEffect(() => {
+    if (compositionKey > 0) {
+      // 先聚焦编辑器
+      editorRef.current?.focus();
+      // 然后恢复光标位置
+      if (selection.start === selection.end) {
+        restoreCursorPosition(selection);
+      } else {
+        restoreSelection(selection);
+      }
+    }
+  }, [compositionKey, selection, restoreCursorPosition, restoreSelection, editorRef]);
+
   // 使用文本输入处理 hook
   const { handleKeyDown } = useTextInput(
     ast,
@@ -189,8 +204,9 @@ const ASTEditor = forwardRef<BlockComponentMethods, {
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
-        // TODO: hack 方式解决组合输入时，光标位置不正确的问题
-        key={JSON.stringify(ast)}
+        // 只在组合输入结束时改变 key，强制重建 DOM
+        // 这样可以避免 React diff 与浏览器修改的 DOM 产生冲突，同时不影响普通输入的性能
+        key={compositionKey}
         onKeyDown={handleKeyDown}
         onSelect={handleSelectionChange}
         onCompositionStart={handleCompositionStart}

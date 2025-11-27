@@ -12,6 +12,8 @@ export function useCursorPosition(ast: ASTNode[]) {
   const isUpdatingFromState = useRef(false);
   const pendingSelection = useRef<Selection | null>(null);
   const isComposing = useRef(false);
+  // 用于在组合输入结束时强制重建 DOM，避免 React diff 与浏览器修改的 DOM 冲突
+  const [compositionKey, setCompositionKey] = useState(0);
 
   // 恢复光标位置（使用 selection 参数）
   const restoreCursorPosition = useCallback((selection: Selection) => {
@@ -159,6 +161,9 @@ export function useCursorPosition(ast: ASTNode[]) {
   const handleCompositionEnd = useCallback(() => {
     console.log('组合输入结束');
     isComposing.current = false;
+    // 递增 compositionKey，强制 React 重建 contentEditable DOM
+    // 这样可以避免 React diff 与浏览器修改的 DOM 产生冲突
+    setCompositionKey(prev => prev + 1);
     // 组合输入结束后，重新计算光标位置
     setTimeout(() => {
       handleSelectionChange();
@@ -176,6 +181,7 @@ export function useCursorPosition(ast: ASTNode[]) {
     handleSelectionChange,
     handleCompositionStart,
     handleCompositionEnd,
-    isComposing
+    isComposing,
+    compositionKey // 用于组合输入结束后强制重建 DOM
   };
 }
