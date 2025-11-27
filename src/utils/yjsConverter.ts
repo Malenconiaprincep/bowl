@@ -76,7 +76,7 @@ export function yDocToBlocks(doc: Y.Doc): Block[] {
   const yBlocks = doc.getArray<Y.Map<unknown>>('blocks');
   const blocks: Block[] = [];
 
-  yBlocks.forEach(yBlock => {
+  yBlocks.forEach((yBlock: Y.Map<unknown>) => {
     const block = yMapToBlock(yBlock);
     if (block) {
       blocks.push(block);
@@ -107,7 +107,7 @@ export function yMapToBlock(yBlock: Y.Map<unknown>): Block | null {
   const content: ContentNode[] = [];
 
   if (yContent) {
-    yContent.forEach(yNode => {
+    yContent.forEach((yNode: Y.Map<unknown>) => {
       const node = yMapToContentNode(yNode);
       if (node) {
         content.push(node);
@@ -147,7 +147,7 @@ export function yMapToContentNode(yNode: Y.Map<unknown>): ContentNode | null {
     const children: ContentNode[] = [];
 
     if (yChildren) {
-      yChildren.forEach(yChild => {
+      yChildren.forEach((yChild: Y.Map<unknown>) => {
         const child = yMapToContentNode(yChild);
         if (child) {
           children.push(child);
