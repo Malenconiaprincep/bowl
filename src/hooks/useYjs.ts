@@ -10,6 +10,13 @@ import {
   removeBlockFromYDoc,
 } from '../utils/yjsConverter';
 
+/** 用户信息 */
+export interface UserInfo {
+  id: number;
+  name: string;
+  color: string;
+}
+
 export interface UseYjsOptions {
   initialBlocks?: Block[];
   doc?: Y.Doc;
@@ -17,6 +24,8 @@ export interface UseYjsOptions {
   websocketUrl?: string;
   /** 房间名称，同一房间的用户可以协同编辑 */
   roomName?: string;
+  /** 当前用户昵称 */
+  userName?: string;
 }
 
 // 统一的 Block 操作 Action 类型
@@ -34,19 +43,39 @@ export interface UseYjsReturn {
   provider: WebsocketProvider | null;
   /** 连接状态 */
   connected: boolean;
+  /** 在线用户列表 */
+  users: UserInfo[];
+  /** 当前用户信息 */
+  currentUser: UserInfo | null;
+  /** 更新当前用户昵称 */
+  setUserName: (name: string) => void;
+}
+
+// 随机生成用户颜色
+const USER_COLORS = [
+  '#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80',
+  '#34d399', '#2dd4bf', '#22d3ee', '#38bdf8', '#60a5fa',
+  '#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6',
+];
+
+function getRandomColor(): string {
+  return USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
 }
 
 /**
  * 使用 yjs 管理 blocks 状态的 Hook
  */
 export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
-  const { initialBlocks = [], doc: externalDoc, websocketUrl, roomName = 'bowl-room' } = options;
+  const { initialBlocks = [], doc: externalDoc, websocketUrl, roomName = 'bowl-room', userName = '匿名用户' } = options;
 
   // 使用 ref 保存 doc，避免重复创建
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const initializedRef = useRef(false);
+  const userColorRef = useRef<string>(getRandomColor());
   const [connected, setConnected] = useState(false);
+  const [users, setUsers] = useState<UserInfo[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserInfo | null>(null);
 
   if (!docRef.current) {
     // 如果使用 WebSocket，先创建空文档，等同步后再决定是否添加初始内容
@@ -63,6 +92,37 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     // 创建 WebSocket Provider
     const provider = new WebsocketProvider(websocketUrl, roomName, doc);
     providerRef.current = provider;
+
+    // 设置当前用户的 awareness 信息
+    const awareness = provider.awareness;
+    const localUser: UserInfo = {
+      id: awareness.clientID,
+      name: userName,
+      color: userColorRef.current,
+    };
+    awareness.setLocalStateField('user', localUser);
+    setCurrentUser(localUser);
+
+    // 更新用户列表的函数
+    const updateUsers = () => {
+      const states = awareness.getStates();
+      const userList: UserInfo[] = [];
+      states.forEach((state, clientId) => {
+        if (state.user) {
+          userList.push({
+            id: clientId,
+            name: state.user.name || '匿名用户',
+            color: state.user.color || '#888',
+          });
+        }
+      });
+      setUsers(userList);
+    };
+
+    // 监听 awareness 变化
+    awareness.on('change', updateUsers);
+    // 初始化用户列表
+    updateUsers();
 
     // 监听连接状态
     provider.on('status', (event: { status: string }) => {
@@ -84,11 +144,13 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     });
 
     return () => {
+      awareness.off('change', updateUsers);
       provider.destroy();
       providerRef.current = null;
       setConnected(false);
+      setUsers([]);
     };
-  }, [websocketUrl, roomName, doc, initialBlocks]);
+  }, [websocketUrl, roomName, doc, initialBlocks, userName]);
 
   // 使用 state 保存当前 blocks
   const [blocks, setBlocksState] = useState<Block[]>(() => yDocToBlocks(doc));
@@ -137,12 +199,29 @@ export function useYjs(options: UseYjsOptions = {}): UseYjsReturn {
     [doc]
   );
 
+  // 更新用户昵称
+  const setUserName = useCallback((name: string) => {
+    const provider = providerRef.current;
+    if (!provider) return;
+
+    const newUser: UserInfo = {
+      id: provider.awareness.clientID,
+      name,
+      color: userColorRef.current,
+    };
+    provider.awareness.setLocalStateField('user', newUser);
+    setCurrentUser(newUser);
+  }, []);
+
   return {
     doc,
     blocks,
     dispatch,
     provider: providerRef.current,
     connected,
+    users,
+    currentUser,
+    setUserName,
   };
 }
 
