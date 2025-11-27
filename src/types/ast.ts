@@ -16,6 +16,3 @@ export type ElementNode = {
 
 // 新的推荐命名
 export type ContentNode = TextNode | ElementNode;
-
-// 保持向后兼容（测试文件使用）
-export type ASTNode = ContentNode;

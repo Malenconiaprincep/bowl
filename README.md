@@ -82,10 +82,10 @@ npm run test:coverage
 
 ```tsx
 import ASTEditor from "./components/editor/AstRichTextEditor"
-import type { ASTNode } from "./types/ast"
+import type { ContentNode } from "./types/ast"
 
 function App() {
-  const initialAST: ASTNode[] = [
+  const initialAST: ContentNode[] = [
     {
       type: "element",
       tag: "p",
@@ -97,7 +97,7 @@ function App() {
     },
   ]
 
-  const handleASTChange = (newAST: ASTNode[]) => {
+  const handleASTChange = (newAST: ContentNode[]) => {
     console.log("AST updated:", newAST)
   }
 
@@ -169,11 +169,15 @@ src/
 The editor uses AST to represent document structure:
 
 ```typescript
-type ASTNode =
-  | { type: "text"; value: string; marks?: Mark[] }
-  | { type: "element"; tag: ElementTag; children: ASTNode[] }
-
 type Mark = "b" | "i" | "u" | "s" // bold, italic, underline, strikethrough
+
+type TextNode = { type: "text"; value: string; marks?: Mark[] }
+
+type ElementTag = "p" | "span" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+
+type ElementNode = { type: "element"; tag: ElementTag; children: ContentNode[] }
+
+type ContentNode = TextNode | ElementNode
 ```
 
 ### Block Types
@@ -182,7 +186,7 @@ type Mark = "b" | "i" | "u" | "s" // bold, italic, underline, strikethrough
 type Block = {
   id: string
   type: "paragraph" | "heading" | "media"
-  content: ASTNode[] | string
+  content: ContentNode[] | string
 }
 ```
 
