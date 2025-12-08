@@ -16,6 +16,8 @@ const PORT = process.env.PORT || 1234;
 const HOST = process.env.HOST || '0.0.0.0';
 // 房间空闲后延迟清理时间（毫秒），默认 30 秒
 const CLEANUP_DELAY = parseInt(process.env.CLEANUP_DELAY) || 30000;
+// 心跳检测间隔（毫秒），默认 30 秒
+const HEARTBEAT_INTERVAL = parseInt(process.env.HEARTBEAT_INTERVAL) || 30000;
 
 // 追踪每个房间的连接数
 const roomConnections = new Map(); // docName -> Set<ws>
@@ -168,6 +170,15 @@ wss.on('connection', (ws, req) => {
 
   console.log(`[${timestamp()}] 新连接: ${docName}`);
 
+  // 心跳检测：标记连接为活跃
+  ws.isAlive = true;
+  ws.docName = docName;
+
+  // 收到 pong 时标记为活跃
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+
   // 追踪连接
   addConnection(docName, ws);
 
@@ -190,6 +201,26 @@ wss.on('connection', (ws, req) => {
   });
 });
 
+// 心跳检测定时器
+const heartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      // 上次 ping 后没有收到 pong，认为连接已断开
+      console.log(`[${timestamp()}] 💔 心跳超时，断开连接: ${ws.docName || 'unknown'}`);
+      return ws.terminate();
+    }
+
+    // 标记为非活跃，等待 pong 响应
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, HEARTBEAT_INTERVAL);
+
+// 服务器关闭时清理心跳定时器
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
+});
+
 // 启动服务器
 server.listen(PORT, HOST, () => {
   console.log(`
@@ -201,6 +232,7 @@ server.listen(PORT, HOST, () => {
 ║  💚 Health check: http://${HOST}:${PORT}/health              ║
 ║  📊 Stats: http://${HOST}:${PORT}/stats                      ║
 ║  🧹 Auto cleanup: ${CLEANUP_DELAY}ms after room empty         ║
+║  💓 Heartbeat interval: ${HEARTBEAT_INTERVAL}ms                ║
 ╚═══════════════════════════════════════════════════════════╝
   `);
 });
@@ -209,7 +241,10 @@ server.listen(PORT, HOST, () => {
 function gracefulShutdown() {
   console.log('\n正在关闭服务器...');
 
-  // 清理所有定时器
+  // 清理心跳定时器
+  clearInterval(heartbeatInterval);
+
+  // 清理所有房间清理定时器
   for (const timerId of cleanupTimers.values()) {
     clearTimeout(timerId);
   }
