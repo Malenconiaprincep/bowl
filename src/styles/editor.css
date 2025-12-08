@@ -21,7 +21,7 @@
   position: relative;
 }
 
-.editor-content.is-empty:before {
+.editor-content.is-empty:focus:before {
   content: attr(data-placeholder);
   color: #aaa;
   pointer-events: none;

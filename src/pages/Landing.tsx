@@ -50,11 +50,6 @@ export default function Landing({ editor, connected, userCount }: LandingProps) 
 
       {/* 主内容区 */}
       <main className={`landing-main ${mounted ? 'mounted' : ''}`}>
-        <div className="landing-badge">
-          <span className="badge-dot" />
-          {t.badge}
-        </div>
-
         <h1 className="landing-title">
           {t.title.think}<span className="title-gradient">{t.title.collaborate}</span>{t.title.create}
         </h1>
