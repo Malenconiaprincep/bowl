@@ -15,6 +15,7 @@ export interface BlockInstance {
  */
 export class BlockManager {
   private blocks: Map<string, BlockInstance> = new Map();
+  private waitingCallbacks: Map<string, Array<(instance: BlockInstance) => void>> = new Map();
 
   /**
    * 直接注册 BlockInstance
@@ -22,6 +23,51 @@ export class BlockManager {
    */
   registerBlockInstance(blockInstance: BlockInstance): void {
     this.blocks.set(blockInstance.id, blockInstance);
+
+    // 触发等待中的回调
+    const callbacks = this.waitingCallbacks.get(blockInstance.id);
+    if (callbacks) {
+      callbacks.forEach(cb => cb(blockInstance));
+      this.waitingCallbacks.delete(blockInstance.id);
+    }
+  }
+
+  /**
+   * 等待 block 实例准备好
+   * @param blockId - block ID
+   * @param timeout - 超时时间（毫秒），默认 2000
+   * @returns Promise<BlockInstance>
+   */
+  waitForBlock(blockId: string, timeout = 2000): Promise<BlockInstance> {
+    return new Promise((resolve, reject) => {
+      // 如果已经存在，直接返回
+      const existing = this.blocks.get(blockId);
+      if (existing?.component) {
+        resolve(existing);
+        return;
+      }
+
+      // 设置超时
+      const timer = setTimeout(() => {
+        const callbacks = this.waitingCallbacks.get(blockId);
+        if (callbacks) {
+          const index = callbacks.indexOf(callback);
+          if (index > -1) callbacks.splice(index, 1);
+          if (callbacks.length === 0) this.waitingCallbacks.delete(blockId);
+        }
+        reject(new Error(`等待 block ${blockId} 超时`));
+      }, timeout);
+
+      // 添加回调
+      const callback = (instance: BlockInstance) => {
+        clearTimeout(timer);
+        resolve(instance);
+      };
+
+      const callbacks = this.waitingCallbacks.get(blockId) || [];
+      callbacks.push(callback);
+      this.waitingCallbacks.set(blockId, callbacks);
+    });
   }
 
   /**

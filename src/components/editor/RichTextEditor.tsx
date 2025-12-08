@@ -38,10 +38,24 @@ function renderNode(node: ContentNode, key: number): React.ReactNode {
   return null;
 }
 
+// 检查内容是否为空
+function isContentEmpty(content: ContentNode[]): boolean {
+  if (content.length === 0) return true;
+  const getText = (nodes: ContentNode[]): string => {
+    return nodes.map(node => {
+      if (node.type === 'text') return node.value || '';
+      if (node.type === 'element') return getText(node.children);
+      return '';
+    }).join('');
+  };
+  return getText(content).trim() === '';
+}
+
 const RichTextEditor = forwardRef<BlockComponentMethods, {
   blockId?: string;
   initialContent: ContentNode[];
   onChange?: (content: ContentNode[]) => void;
+  placeholder?: string;
   blockIndex?: number;
   onInsertBlock?: (blockIndex: number, newBlock: Block) => void;
   onDeleteBlock?: (blockIndex: number) => void;
@@ -51,6 +65,7 @@ const RichTextEditor = forwardRef<BlockComponentMethods, {
 }>(({
   initialContent,
   onChange,
+  placeholder,
   blockIndex,
   onInsertBlock,
   onDeleteBlock,
@@ -198,6 +213,8 @@ const RichTextEditor = forwardRef<BlockComponentMethods, {
     onMergeWithPreviousBlock
   );
 
+  const isEmpty = isContentEmpty(content);
+
   return (
     <div>
       <div
@@ -211,7 +228,8 @@ const RichTextEditor = forwardRef<BlockComponentMethods, {
         onSelect={handleSelectionChange}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
-        className="editor-content"
+        className={`editor-content${isEmpty ? ' is-empty' : ''}`}
+        data-placeholder={placeholder || '输入内容...'}
       >
         {content.map((node, idx) => renderNode(node, idx))}
       </div>

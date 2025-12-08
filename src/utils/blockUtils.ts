@@ -50,3 +50,13 @@ export const findPreviousTextBlock = (blocks: Block[], currentIndex: number): nu
 export const isTextBlock = (block: Block): boolean => {
   return block.type === 'paragraph' || block.type === 'heading'
 }
+
+/**
+ * 检查 block 内容是否为空
+ */
+export const isBlockEmpty = (block: Block): boolean => {
+  if (!isTextBlock(block)) return false
+  const content = (block as { content?: ContentNode[] }).content
+  if (!content || content.length === 0) return true
+  return extractTextContent(content).trim() === ''
+}

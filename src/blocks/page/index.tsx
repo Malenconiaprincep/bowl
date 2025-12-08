@@ -8,7 +8,7 @@ import { useRemoteCursorSync } from '../../hooks/useRemoteCursorSync'
 import { blockManager } from '../../utils/blockManager'
 import { selectionManager, type SelectionInfo } from '../../utils/selectionManager'
 import { mergeContent } from '../../utils/textOperations'
-import { calculateTextLength, findPreviousTextBlock, isTextBlock } from '../../utils/blockUtils'
+import { calculateTextLength, findPreviousTextBlock, isTextBlock, isBlockEmpty } from '../../utils/blockUtils'
 import type { TextMethods } from '../text'
 import type { BlockAction, RemoteCursor } from '../../hooks/useYjs'
 import './style.scss'
@@ -32,6 +32,33 @@ export default function PageBlock({ blocks, dispatch, remoteCursors = [], onBloc
 
   // 使用远程光标同步 hook
   useRemoteCursorSync({ onCursorChange: onBlockFocus })
+
+  // 初始自动聚焦：找到第一个空的 block 并聚焦
+  const hasAutoFocused = useRef(false)
+  useEffect(() => {
+    if (hasAutoFocused.current || blocks.length === 0) return
+
+    // 找到第一个空的 text block
+    const emptyBlockIndex = blocks.findIndex(block => isBlockEmpty(block))
+    const targetIndex = emptyBlockIndex !== -1 ? emptyBlockIndex : 0
+    const targetBlock = blocks[targetIndex]
+
+    if (!targetBlock || !isTextBlock(targetBlock)) return
+
+    // 等待组件实例准备好后聚焦
+    let cancelled = false
+    blockManager.waitForBlock(targetBlock.id).then(blockInstance => {
+      if (cancelled || hasAutoFocused.current) return
+      const component = blockInstance.component as unknown as TextMethods
+      component.focus?.()
+      component.setSelection?.({ start: 0, end: 0 })
+      hasAutoFocused.current = true
+    }).catch(() => {
+      // 超时，忽略
+    })
+
+    return () => { cancelled = true }
+  }, [blocks])
 
   // 使用选区管理器
   useEffect(() => {

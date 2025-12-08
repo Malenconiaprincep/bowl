@@ -18,15 +18,16 @@
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap; /* 保留空格和换行，但允许自动换行 */
+  position: relative;
 }
 
-.editor-content:empty:before {
+.editor-content.is-empty:before {
   content: attr(data-placeholder);
-  color: #999;
+  color: #aaa;
   pointer-events: none;
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 6px;
+  left: 0;
 }
 
 /* 编辑器内容样式 - 所见即所得 */
