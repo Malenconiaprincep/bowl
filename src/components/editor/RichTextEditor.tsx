@@ -229,7 +229,7 @@ const RichTextEditor = forwardRef<BlockComponentMethods, {
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         className={`editor-content${isEmpty ? ' is-empty' : ''}`}
-        data-placeholder={placeholder || '输入内容...'}
+        data-placeholder={placeholder || 'Type something...'}
       >
         {content.map((node, idx) => renderNode(node, idx))}
       </div>
