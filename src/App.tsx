@@ -12,7 +12,8 @@ const ROOM_ID = 'bowl-playground';
 // 从 localStorage 获取保存的用户名
 function getSavedUserName(): string {
   const saved = localStorage.getItem('bowl-user-name');
-  if (saved) return saved;
+  // 如果是旧的中文格式，重新生成英文名
+  if (saved && !saved.startsWith('用户')) return saved;
   // 生成一个随机昵称
   const randomName = `User${Math.floor(Math.random() * 10000)}`;
   localStorage.setItem('bowl-user-name', randomName);

@@ -122,28 +122,35 @@ function RemoteCursorItem({ cursor, blockId }: RemoteCursorItemProps) {
         position: 'absolute',
         left: position.x,
         top: position.y,
-        width: 1.5,
-        height: position.height,
-        backgroundColor: cursor.userColor,
         zIndex: 10,
         pointerEvents: 'none',
-        animation: 'remote-cursor-blink 1.2s ease-in-out infinite',
       }}
     >
+      {/* 光标线 */}
+      <div
+        style={{
+          width: 2,
+          height: position.height,
+          backgroundColor: cursor.userColor,
+          animation: 'remote-cursor-blink 1.2s ease-in-out infinite',
+        }}
+      />
+      {/* 用户名标签 */}
       <div
         style={{
           position: 'absolute',
           left: 0,
-          top: -14,
+          bottom: '100%',
+          marginBottom: 2,
           backgroundColor: cursor.userColor,
           color: 'white',
-          fontSize: 9,
-          padding: '1px 4px',
-          borderRadius: 2,
+          fontSize: 10,
+          padding: '2px 6px',
+          borderRadius: 3,
           whiteSpace: 'nowrap',
           fontWeight: 500,
           lineHeight: 1.2,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
         }}
       >
         {cursor.userName}
